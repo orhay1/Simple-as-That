@@ -78,9 +78,22 @@ export default function Drafts() {
     );
   };
 
+  const handleGenerateImageDescription = (draft: any) => {
+    generateContent.mutate(
+      { type: 'image_description', inputs: { title: draft.title, body: draft.body } },
+      {
+        onSuccess: (data) => {
+          if (data.image_description) {
+            updateDraft.mutate({ id: draft.id, image_description: data.image_description });
+          }
+        },
+      }
+    );
+  };
+
   const handleGenerateImage = (draft: any) => {
     if (!draft.image_description) {
-      toast.error('Add an image description first');
+      toast.error('Add an image description first, or use "Generate Description"');
       return;
     }
     generateImage.mutate({ prompt: draft.image_description, draft_id: draft.id });
@@ -203,6 +216,11 @@ export default function Drafts() {
                       <DropdownMenuSeparator />
                       <DropdownMenuItem onClick={() => handleGenerateHashtags(draft)}>
                         <Hash className="mr-2 h-4 w-4" /> Generate Hashtags
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuLabel>Image</DropdownMenuLabel>
+                      <DropdownMenuItem onClick={() => handleGenerateImageDescription(draft)}>
+                        <Wand2 className="mr-2 h-4 w-4" /> Generate Description
                       </DropdownMenuItem>
                       <DropdownMenuItem onClick={() => handleGenerateImage(draft)}>
                         <Image className="mr-2 h-4 w-4" /> Generate Image

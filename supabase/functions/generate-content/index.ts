@@ -13,7 +13,7 @@ const corsHeaders = {
 
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-type GenerationType = 'topics' | 'draft' | 'hashtags' | 'rewrite';
+type GenerationType = 'topics' | 'draft' | 'hashtags' | 'rewrite' | 'image_description';
 
 interface GenerateRequest {
   type: GenerationType;
@@ -261,6 +261,39 @@ async function rewriteContent(inputs: Record<string, any>) {
   return { rewritten: content, usage };
 }
 
+async function generateImageDescription(inputs: Record<string, any>) {
+  const { title, body } = inputs;
+  
+  const systemPrompt = `You are a visual content strategist for LinkedIn. Based on a post's content, create a concise image description optimized for AI image generation.
+  
+  Guidelines:
+  - Create a professional, business-appropriate image concept
+  - Focus on the key theme or message of the post
+  - Use descriptive visual language (colors, composition, mood)
+  - Keep it to 1-2 sentences, max 50 words
+  - Avoid text in the image, focus on visual metaphors
+  - Return only the description, no explanations`;
+
+  const userPrompt = `Create an image description for this LinkedIn post:
+Title: ${title}
+Content: ${body}`;
+
+  const { content, usage } = await callOpenAI(systemPrompt, userPrompt, 'gpt-4o-mini');
+
+  await logToLedger({
+    generation_type: 'image_description',
+    system_prompt: systemPrompt,
+    user_prompt: userPrompt,
+    inputs,
+    raw_output: content,
+    parsed_output: { image_description: content.trim() },
+    model: 'gpt-4o-mini',
+    token_usage: usage,
+  });
+
+  return { image_description: content.trim(), usage };
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -283,6 +316,9 @@ serve(async (req) => {
         break;
       case 'rewrite':
         result = await rewriteContent(inputs);
+        break;
+      case 'image_description':
+        result = await generateImageDescription(inputs);
         break;
       default:
         throw new Error(`Unknown generation type: ${type}`);
