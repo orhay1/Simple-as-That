@@ -8,18 +8,22 @@ import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useTopics } from '@/hooks/useTopics';
 import { useDrafts } from '@/hooks/useDrafts';
+import { useAIGeneration } from '@/hooks/useAIGeneration';
 import { useNavigate } from 'react-router-dom';
-import { Sparkles, Plus, Star, Archive, FileEdit, Trash2 } from 'lucide-react';
+import { Sparkles, Plus, Star, Archive, FileEdit, Trash2, Loader2, Wand2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function Topics() {
   const { topics, createTopic, updateTopicStatus, deleteTopic } = useTopics();
   const { createDraft } = useDrafts();
+  const { generateContent, isGenerating } = useAIGeneration();
   const navigate = useNavigate();
   const [newTitle, setNewTitle] = useState('');
   const [newHook, setNewHook] = useState('');
   const [newRationale, setNewRationale] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [aiContext, setAiContext] = useState('');
+  const [aiDialogOpen, setAiDialogOpen] = useState(false);
 
   const handleCreateTopic = () => {
     if (!newTitle.trim()) return toast.error('Title is required');
@@ -28,6 +32,15 @@ export default function Topics() {
     setNewHook('');
     setNewRationale('');
     setDialogOpen(false);
+  };
+
+  const handleGenerateTopics = () => {
+    generateContent.mutate({
+      type: 'topics',
+      inputs: { context: aiContext || undefined },
+    });
+    setAiDialogOpen(false);
+    setAiContext('');
   };
 
   const handleConvertToDraft = async (topic: typeof topics[0]) => {
@@ -55,6 +68,32 @@ export default function Topics() {
             <p className="text-muted-foreground">Generate and manage content ideas</p>
           </div>
           <div className="flex gap-2">
+            <Dialog open={aiDialogOpen} onOpenChange={setAiDialogOpen}>
+              <DialogTrigger asChild>
+                <Button variant="secondary" disabled={isGenerating}>
+                  {isGenerating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Wand2 className="mr-2 h-4 w-4" />}
+                  Generate with AI
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader><DialogTitle>Generate Topics with AI</DialogTitle></DialogHeader>
+                <div className="space-y-4">
+                  <Textarea 
+                    placeholder="Optional: Describe your audience, industry, or content focus..."
+                    value={aiContext}
+                    onChange={(e) => setAiContext(e.target.value)}
+                    rows={4}
+                  />
+                  <p className="text-sm text-muted-foreground">
+                    AI will generate 5 topic ideas based on your context. Leave empty for general professional topics.
+                  </p>
+                  <Button onClick={handleGenerateTopics} className="w-full" disabled={isGenerating}>
+                    {isGenerating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
+                    Generate 5 Topics
+                  </Button>
+                </div>
+              </DialogContent>
+            </Dialog>
             <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
               <DialogTrigger asChild>
                 <Button><Plus className="mr-2 h-4 w-4" /> Add Topic</Button>
@@ -88,6 +127,13 @@ export default function Topics() {
                   </CardHeader>
                   <CardContent>
                     <p className="text-sm text-muted-foreground mb-3 line-clamp-2">{topic.hook}</p>
+                    {topic.tags && topic.tags.length > 0 && (
+                      <div className="flex gap-1 flex-wrap mb-3">
+                        {topic.tags.slice(0, 3).map((tag, i) => (
+                          <Badge key={i} variant="secondary" className="text-xs">{tag}</Badge>
+                        ))}
+                      </div>
+                    )}
                     <div className="flex gap-2 flex-wrap">
                       {status !== 'shortlisted' && status !== 'archived' && (
                         <Button size="sm" variant="outline" onClick={() => updateTopicStatus.mutate({ id: topic.id, status: 'shortlisted' })}>
