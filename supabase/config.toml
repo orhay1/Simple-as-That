@@ -11,3 +11,6 @@ verify_jwt = false
 
 [functions.linkedin-post]
 verify_jwt = true
+
+[functions.suggest-guardrails]
+verify_jwt = false

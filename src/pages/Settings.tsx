@@ -5,16 +5,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { useSettings } from '@/hooks/useSettings';
 import { useLinkedIn } from '@/hooks/useLinkedIn';
-import { useAuth } from '@/contexts/AuthContext';
+import { PromptsTab } from '@/components/settings/PromptsTab';
+import { GuardrailsTab } from '@/components/settings/GuardrailsTab';
 import { Linkedin, FileText, Shield, CheckCircle, AlertCircle, Loader2, LogOut } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 
 export default function Settings() {
-  const { settings, getSetting } = useSettings();
-  const { isManager } = useAuth();
   const { connection, isLoading, isConnected, isExpired, connectLinkedIn, disconnectLinkedIn } = useLinkedIn();
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -32,14 +30,26 @@ export default function Settings() {
 
   return (
     <AppLayout>
-      <div className="space-y-6">
-        <div><h1 className="text-3xl font-bold text-foreground">Settings</h1><p className="text-muted-foreground">Configure your content studio</p></div>
+      <div className="space-y-6 animate-fade-in">
+        <div>
+          <h1 className="text-3xl font-bold text-foreground">Settings</h1>
+          <p className="text-muted-foreground">Configure your content studio</p>
+        </div>
         
-        <Tabs defaultValue="linkedin">
-          <TabsList>
-            <TabsTrigger value="linkedin"><Linkedin className="mr-2 h-4 w-4" />LinkedIn</TabsTrigger>
-            <TabsTrigger value="prompts"><FileText className="mr-2 h-4 w-4" />Prompts</TabsTrigger>
-            <TabsTrigger value="guardrails"><Shield className="mr-2 h-4 w-4" />Guardrails</TabsTrigger>
+        <Tabs defaultValue="linkedin" className="space-y-4">
+          <TabsList className="grid w-full grid-cols-3 lg:w-auto lg:inline-grid">
+            <TabsTrigger value="linkedin" className="gap-2">
+              <Linkedin className="h-4 w-4" />
+              <span className="hidden sm:inline">LinkedIn</span>
+            </TabsTrigger>
+            <TabsTrigger value="prompts" className="gap-2">
+              <FileText className="h-4 w-4" />
+              <span className="hidden sm:inline">Prompts</span>
+            </TabsTrigger>
+            <TabsTrigger value="guardrails" className="gap-2">
+              <Shield className="h-4 w-4" />
+              <span className="hidden sm:inline">Guardrails</span>
+            </TabsTrigger>
           </TabsList>
           
           <TabsContent value="linkedin" className="space-y-4">
@@ -124,20 +134,12 @@ export default function Settings() {
             </Card>
           </TabsContent>
           
-          <TabsContent value="prompts" className="space-y-4">
-            <Card>
-              <CardHeader><CardTitle>AI Generation Prompts</CardTitle><CardDescription>Customize prompts for content generation</CardDescription></CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground">Topic Generator, Draft Generator, and Hashtag Generator prompts are pre-configured from your n8n workflow. {isManager ? 'You can edit them here.' : 'Contact a manager to edit.'}</p>
-              </CardContent>
-            </Card>
+          <TabsContent value="prompts">
+            <PromptsTab />
           </TabsContent>
           
           <TabsContent value="guardrails">
-            <Card>
-              <CardHeader><CardTitle>Content Guardrails</CardTitle><CardDescription>Set rules for content quality</CardDescription></CardHeader>
-              <CardContent><p className="text-muted-foreground">Banned phrases, disclaimers, and content rules are pre-configured. Manager can edit.</p></CardContent>
-            </Card>
+            <GuardrailsTab />
           </TabsContent>
         </Tabs>
       </div>

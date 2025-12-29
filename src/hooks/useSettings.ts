@@ -49,11 +49,46 @@ export function useSettings() {
     },
   });
 
+  const upsertSetting = useMutation({
+    mutationFn: async ({ key, value }: { key: string; value: any }) => {
+      const existingSetting = settings.find(s => s.key === key);
+      
+      if (existingSetting) {
+        const { data, error } = await supabase
+          .from('settings')
+          .update({ value: JSON.stringify(value) })
+          .eq('key', key)
+          .select()
+          .single();
+        
+        if (error) throw error;
+        return data;
+      } else {
+        const { data, error } = await supabase
+          .from('settings')
+          .insert({ key, value: JSON.stringify(value) })
+          .select()
+          .single();
+        
+        if (error) throw error;
+        return data;
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['settings'] });
+      toast.success('Setting saved');
+    },
+    onError: (error) => {
+      toast.error('Failed to save setting: ' + error.message);
+    },
+  });
+
   return {
     settings,
     isLoading,
     error,
     getSetting,
     updateSetting,
+    upsertSetting,
   };
 }
