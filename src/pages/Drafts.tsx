@@ -9,13 +9,15 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator, DropdownMenuLabel } from '@/components/ui/dropdown-menu';
 import { useDrafts } from '@/hooks/useDrafts';
 import { useAIGeneration } from '@/hooks/useAIGeneration';
-import { Plus, Edit, Trash2, Eye, CheckCircle, Send, Loader2, Wand2, Hash, Image, RotateCcw, ChevronDown, Link } from 'lucide-react';
+import { useLinkedIn } from '@/hooks/useLinkedIn';
+import { Plus, Edit, Trash2, Eye, CheckCircle, Send, Loader2, Wand2, Hash, Image, RotateCcw, ChevronDown, Link, Linkedin } from 'lucide-react';
 import { PostStatus } from '@/types/database';
 import { toast } from 'sonner';
 
 export default function Drafts() {
   const { drafts, createDraft, updateDraft, updateDraftStatus, deleteDraft } = useDrafts();
   const { generateContent, generateImage, isGenerating } = useAIGeneration();
+  const { isConnected, publishToLinkedIn } = useLinkedIn();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editDraft, setEditDraft] = useState<any>(null);
   const [title, setTitle] = useState('');
@@ -99,13 +101,27 @@ export default function Drafts() {
     generateImage.mutate({ prompt: draft.image_description, draft_id: draft.id });
   };
 
-  const handlePublish = (draftId: string) => {
+  const handlePublishToLinkedIn = (draft: any) => {
+    const hashtags = [
+      ...(draft.hashtags_broad || []),
+      ...(draft.hashtags_niche || []),
+      ...(draft.hashtags_trending || []),
+    ];
+    
+    publishToLinkedIn.mutate({
+      content: draft.body,
+      draftId: draft.id,
+      hashtags,
+    });
+  };
+
+  const handleManualPublish = (draftId: string) => {
     setPublishingDraftId(draftId);
     setPublishUrl('');
     setPublishDialogOpen(true);
   };
 
-  const confirmPublish = () => {
+  const confirmManualPublish = () => {
     if (!publishingDraftId) return;
     updateDraft.mutate({ id: publishingDraftId, published_url: publishUrl || undefined });
     updateDraftStatus.mutate({ id: publishingDraftId, status: 'published' });
@@ -239,9 +255,33 @@ export default function Drafts() {
                     </Button>
                   )}
                   {draft.status === 'approved' && (
-                    <Button size="sm" onClick={() => handlePublish(draft.id)}>
-                      <Send className="mr-1 h-3 w-3" /> Publish
-                    </Button>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button size="sm" disabled={publishToLinkedIn.isPending}>
+                          {publishToLinkedIn.isPending ? (
+                            <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                          ) : (
+                            <Send className="mr-1 h-3 w-3" />
+                          )}
+                          Publish <ChevronDown className="ml-1 h-3 w-3" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent>
+                        {isConnected ? (
+                          <DropdownMenuItem onClick={() => handlePublishToLinkedIn(draft)}>
+                            <Linkedin className="mr-2 h-4 w-4" /> Publish to LinkedIn
+                          </DropdownMenuItem>
+                        ) : (
+                          <DropdownMenuItem disabled>
+                            <Linkedin className="mr-2 h-4 w-4" /> LinkedIn not connected
+                          </DropdownMenuItem>
+                        )}
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem onClick={() => handleManualPublish(draft.id)}>
+                          <Link className="mr-2 h-4 w-4" /> Mark as Published
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   )}
                   <Button size="sm" variant="ghost" onClick={() => deleteDraft.mutate(draft.id)}>
                     <Trash2 className="h-3 w-3" />
@@ -282,7 +322,7 @@ export default function Drafts() {
                   onChange={(e) => setPublishUrl(e.target.value)} 
                 />
               </div>
-              <Button onClick={confirmPublish} className="w-full">
+              <Button onClick={confirmManualPublish} className="w-full">
                 <CheckCircle className="mr-2 h-4 w-4" /> Confirm Published
               </Button>
             </div>
