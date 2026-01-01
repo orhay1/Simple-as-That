@@ -6,8 +6,10 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator, DropdownMenuLabel } from '@/components/ui/dropdown-menu';
 import { LinkedInPostPreview } from './LinkedInPostPreview';
+import { AssetPickerDialog } from './AssetPickerDialog';
 import { PostDraftWithAsset } from '@/types/database';
-import { Wand2, Hash, Image, RotateCcw, ChevronDown, Loader2, Save } from 'lucide-react';
+import { Asset } from '@/types/database';
+import { Wand2, Hash, Image, RotateCcw, ChevronDown, Loader2, Save, FolderOpen } from 'lucide-react';
 
 interface DraftEditorSheetProps {
   draft: PostDraftWithAsset | null;
@@ -18,6 +20,7 @@ interface DraftEditorSheetProps {
   onGenerateHashtags: () => void;
   onGenerateImageDescription: () => void;
   onGenerateImage: () => void;
+  onAttachAsset: (assetId: string) => void;
   isGenerating: boolean;
   isGeneratingImage?: boolean;
   profileName?: string;
@@ -34,6 +37,7 @@ export function DraftEditorSheet({
   onGenerateHashtags,
   onGenerateImageDescription,
   onGenerateImage,
+  onAttachAsset,
   isGenerating,
   isGeneratingImage,
   profileName,
@@ -43,6 +47,11 @@ export function DraftEditorSheet({
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
   const [imageDescription, setImageDescription] = useState('');
+  const [showAssetPicker, setShowAssetPicker] = useState(false);
+
+  const handleAssetSelect = (asset: Asset) => {
+    onAttachAsset(asset.id);
+  };
 
   // Sync state when draft changes (including after mutations update the draft)
   useEffect(() => {
@@ -170,6 +179,10 @@ export function DraftEditorSheet({
                     <DropdownMenuItem onClick={onGenerateImage} disabled={!imageDescription && !draft?.image_description}>
                       <Image className="mr-2 h-4 w-4" /> Generate Image
                     </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={() => setShowAssetPicker(true)}>
+                      <FolderOpen className="mr-2 h-4 w-4" /> Choose from Library
+                    </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
               </div>
@@ -190,6 +203,13 @@ export function DraftEditorSheet({
             />
           </div>
         </div>
+
+        {/* Asset Picker Dialog */}
+        <AssetPickerDialog
+          open={showAssetPicker}
+          onOpenChange={setShowAssetPicker}
+          onSelect={handleAssetSelect}
+        />
       </SheetContent>
     </Sheet>
   );

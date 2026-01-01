@@ -153,6 +153,20 @@ export default function Drafts() {
     );
   };
 
+  const handleAttachAsset = (assetId: string) => {
+    if (!editDraft) return;
+    updateDraft.mutate(
+      { id: editDraft.id, image_asset_id: assetId },
+      {
+        onSuccess: () => {
+          // Refetch to get the joined asset data
+          setEditDraft(prev => prev ? { ...prev, image_asset_id: assetId } : null);
+          toast.success('Image attached to draft');
+        }
+      }
+    );
+  };
+
   const handlePublishToLinkedIn = (draft: PostDraftWithAsset) => {
     const hashtags = [
       ...(draft.hashtags_broad || []),
@@ -312,6 +326,7 @@ export default function Drafts() {
           onGenerateHashtags={handleGenerateHashtags}
           onGenerateImageDescription={handleGenerateImageDescription}
           onGenerateImage={handleGenerateImage}
+          onAttachAsset={handleAttachAsset}
           isGenerating={isGenerating}
           isGeneratingImage={isGeneratingImage}
           profileName={connection?.profile_name || undefined}
