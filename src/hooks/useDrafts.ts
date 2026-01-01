@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { PostDraft, PostStatus } from '@/types/database';
+import { PostDraftWithAsset, PostStatus } from '@/types/database';
 import { toast } from 'sonner';
 
 export function useDrafts() {
@@ -11,11 +11,18 @@ export function useDrafts() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('post_drafts')
-        .select('*')
+        .select(`
+          *,
+          image_asset:assets!image_asset_id (
+            id,
+            file_url,
+            prompt
+          )
+        `)
         .order('updated_at', { ascending: false });
       
       if (error) throw error;
-      return data as PostDraft[];
+      return data as PostDraftWithAsset[];
     },
   });
 
@@ -40,10 +47,12 @@ export function useDrafts() {
   });
 
   const updateDraft = useMutation({
-    mutationFn: async ({ id, ...updates }: Partial<PostDraft> & { id: string }) => {
+    mutationFn: async ({ id, ...updates }: Partial<PostDraftWithAsset> & { id: string }) => {
+      // Remove image_asset from updates as it's a joined field, not a real column
+      const { image_asset, ...dbUpdates } = updates;
       const { data, error } = await supabase
         .from('post_drafts')
-        .update(updates)
+        .update(dbUpdates)
         .eq('id', id)
         .select()
         .single();
