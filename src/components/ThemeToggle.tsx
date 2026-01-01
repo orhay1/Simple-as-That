@@ -40,6 +40,8 @@ export const ThemeToggle = React.forwardRef<
 
   const handleToggle = () => {
     const newTheme = isDark ? 'light' : 'dark';
+    console.log('[ThemeToggle] Current resolvedTheme:', resolvedTheme);
+    console.log('[ThemeToggle] Switching to:', newTheme);
     setTheme(newTheme);
   };
 
