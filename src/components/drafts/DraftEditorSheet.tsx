@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'react';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { cn } from '@/lib/utils';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -48,6 +50,7 @@ export function DraftEditorSheet({
   const [body, setBody] = useState('');
   const [imageDescription, setImageDescription] = useState('');
   const [showAssetPicker, setShowAssetPicker] = useState(false);
+  const isMobile = useIsMobile();
 
   const handleAssetSelect = (asset: Asset) => {
     onAttachAsset(asset.id);
@@ -92,9 +95,15 @@ export function DraftEditorSheet({
           </div>
         </SheetHeader>
 
-        <div className="flex-1 overflow-hidden flex">
+        <div className={cn(
+          "flex-1 overflow-hidden",
+          isMobile ? "flex flex-col overflow-y-auto" : "flex"
+        )}>
           {/* Editor Panel */}
-          <div className="flex-1 p-6 overflow-y-auto border-r border-border space-y-4">
+          <div className={cn(
+            "p-4 sm:p-6 space-y-4",
+            isMobile ? "border-b border-border" : "flex-1 overflow-y-auto border-r border-border"
+          )}>
             <div className="space-y-2">
               <label className="text-sm font-medium text-foreground">Title</label>
               <Input 
@@ -190,7 +199,10 @@ export function DraftEditorSheet({
           </div>
 
           {/* Preview Panel */}
-          <div className="w-[400px] p-6 overflow-y-auto bg-muted/30">
+          <div className={cn(
+            "p-4 sm:p-6 bg-muted/30",
+            isMobile ? "w-full" : "w-[400px] overflow-y-auto"
+          )}>
             <LinkedInPostPreview
               profileName={profileName}
               profileAvatar={profileAvatar}
