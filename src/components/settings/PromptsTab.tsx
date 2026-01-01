@@ -15,6 +15,7 @@ interface PromptItemProps {
   title: string;
   settingKey: string;
   description: string;
+  placeholders?: string;
   value: string;
   onChange: (value: string) => void;
   onSave: () => void;
@@ -22,7 +23,7 @@ interface PromptItemProps {
   disabled: boolean;
 }
 
-function PromptItem({ title, description, value, onChange, onSave, isSaving, disabled }: PromptItemProps) {
+function PromptItem({ title, description, placeholders, value, onChange, onSave, isSaving, disabled }: PromptItemProps) {
   const [isOpen, setIsOpen] = useState(false);
 
   return (
@@ -43,6 +44,11 @@ function PromptItem({ title, description, value, onChange, onSave, isSaving, dis
             className="min-h-[150px] resize-y"
             disabled={disabled}
           />
+          {placeholders && (
+            <p className="text-xs text-muted-foreground">
+              <span className="font-medium">Available placeholders:</span> {placeholders}
+            </p>
+          )}
           <div className="flex items-center justify-between">
             <span className="text-xs text-muted-foreground">{value.length} characters</span>
             <Button onClick={onSave} disabled={disabled || isSaving} size="sm">
@@ -57,10 +63,10 @@ function PromptItem({ title, description, value, onChange, onSave, isSaving, dis
 }
 
 const PROMPT_CONFIGS = [
-  { key: 'topic_generator_prompt', title: 'Topic Generator Prompt', description: 'Generates topic ideas for content' },
-  { key: 'draft_generator_prompt', title: 'Draft Generator Prompt', description: 'Creates post drafts from topics' },
-  { key: 'hashtag_generator_prompt', title: 'Hashtag Generator Prompt', description: 'Generates relevant hashtags' },
-  { key: 'image_generator_prompt', title: 'Image Generator Prompt', description: 'Creates image descriptions and prompts' },
+  { key: 'topic_generator_prompt', title: 'Topic Generator Prompt', description: 'Generates topic ideas for content', placeholders: '{context}' },
+  { key: 'draft_generator_prompt', title: 'Draft Generator Prompt', description: 'Creates post drafts from topics', placeholders: '{title}, {hook}, {rationale}, {topic_id}' },
+  { key: 'hashtag_generator_prompt', title: 'Hashtag Generator Prompt', description: 'Generates relevant hashtags', placeholders: '{title}, {body}' },
+  { key: 'image_generator_prompt', title: 'Image Generator Prompt', description: 'Creates image descriptions and prompts', placeholders: '{title}, {body}' },
 ];
 
 const VOICE_SETTINGS = {
@@ -123,6 +129,7 @@ export function PromptsTab() {
               settingKey={config.key}
               title={config.title}
               description={config.description}
+              placeholders={config.placeholders}
               value={getPromptValue(config.key)}
               onChange={(value) => setPrompts(prev => ({ ...prev, [config.key]: value }))}
               onSave={() => handleSavePrompt(config.key)}

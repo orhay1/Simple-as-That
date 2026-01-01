@@ -36,6 +36,13 @@ async function getPromptFromSettings(key: string): Promise<string | null> {
   return typeof value === 'string' ? value : JSON.stringify(value);
 }
 
+function interpolatePlaceholders(template: string, inputs: Record<string, any>): string {
+  return template.replace(/\{(\w+)\}/g, (match, key) => {
+    const value = inputs[key];
+    return value !== undefined && value !== null ? String(value) : match;
+  });
+}
+
 async function logToLedger(entry: {
   generation_type: string;
   system_prompt?: string;
@@ -123,7 +130,9 @@ Return a valid JSON array with exactly 5 topics. Each topic must have:
 Return ONLY the JSON array, no additional text or explanation.`;
 
   const systemPrompt = 'You are a LinkedIn content strategist. Generate topic ideas in the exact JSON format requested.';
-  const userPrompt = customPrompt || defaultPrompt;
+  const userPrompt = customPrompt 
+    ? interpolatePlaceholders(customPrompt, inputs) 
+    : defaultPrompt;
 
   const { content, usage } = await callOpenAI(systemPrompt, userPrompt, 'gpt-4o-mini');
   
@@ -215,7 +224,9 @@ Return a valid JSON object with:
 Return ONLY the JSON object, no additional text.`;
 
   const systemPrompt = 'You are a LinkedIn content writer. Create posts in the exact JSON format requested.';
-  const userPrompt = customPrompt || defaultPrompt;
+  const userPrompt = customPrompt 
+    ? interpolatePlaceholders(customPrompt, inputs) 
+    : defaultPrompt;
 
   const { content, usage } = await callOpenAI(systemPrompt, userPrompt, 'gpt-4o-mini');
 
@@ -286,7 +297,9 @@ Return a valid JSON object with:
 Return ONLY the JSON object, no additional text.`;
 
   const systemPrompt = 'You are a LinkedIn SEO expert. Generate hashtags in the exact JSON format requested.';
-  const userPrompt = customPrompt || defaultPrompt;
+  const userPrompt = customPrompt 
+    ? interpolatePlaceholders(customPrompt, inputs) 
+    : defaultPrompt;
 
   const { content, usage } = await callOpenAI(systemPrompt, userPrompt, 'gpt-4o-mini');
 
@@ -416,9 +429,11 @@ async function rewriteContent(inputs: Record<string, any>) {
 async function generateImageDescription(inputs: Record<string, any>) {
   const { title, body } = inputs;
   
+  const customPrompt = await getPromptFromSettings('image_generator_prompt');
+  
   const systemPrompt = `You are a visual content strategist specializing in LinkedIn imagery. Your task is to create image descriptions optimized for AI image generation that will complement professional posts.`;
 
-  const userPrompt = `Create an image description for AI generation based on this LinkedIn post.
+  const defaultUserPrompt = `Create an image description for AI generation based on this LinkedIn post.
 
 ## Post Content
 Title: ${title}
@@ -441,6 +456,10 @@ Content: ${body}
 ## Output
 Return ONLY the image description in 1-2 sentences (max 40 words). No explanations or additional text.
 Focus on: subject, setting, style, mood, and key visual elements.`;
+
+  const userPrompt = customPrompt 
+    ? interpolatePlaceholders(customPrompt, inputs) 
+    : defaultUserPrompt;
 
   const { content, usage } = await callOpenAI(systemPrompt, userPrompt, 'gpt-4o-mini');
 
