@@ -65,12 +65,32 @@ serve(async (req) => {
       try {
         stateData = JSON.parse(atob(state));
       } catch {
-        console.error('Invalid state parameter');
+        console.error('Invalid state parameter - failed to decode');
         return redirectWithError('Invalid state parameter');
       }
 
-      const { userId } = stateData;
-      console.log(`Processing callback for user: ${userId}`);
+      const { userId, timestamp } = stateData;
+      
+      // Validate state timestamp (max age: 10 minutes)
+      const STATE_MAX_AGE_MS = 10 * 60 * 1000; // 10 minutes
+      const stateAge = Date.now() - timestamp;
+      
+      if (!timestamp || typeof timestamp !== 'number') {
+        console.error('Invalid state parameter - missing timestamp');
+        return redirectWithError('Invalid authorization state');
+      }
+      
+      if (stateAge > STATE_MAX_AGE_MS) {
+        console.error(`State token expired. Age: ${Math.round(stateAge / 1000)}s, Max: ${STATE_MAX_AGE_MS / 1000}s`);
+        return redirectWithError('Authorization expired, please try again');
+      }
+      
+      if (stateAge < 0) {
+        console.error('State token has future timestamp - possible tampering');
+        return redirectWithError('Invalid authorization state');
+      }
+      
+      console.log(`Processing callback for user: ${userId}, state age: ${Math.round(stateAge / 1000)}s`);
 
       // Exchange code for access token
       const tokenResponse = await fetch('https://www.linkedin.com/oauth/v2/accessToken', {
