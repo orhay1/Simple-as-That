@@ -128,9 +128,11 @@ export type Database = {
       linkedin_connections: {
         Row: {
           access_token: string | null
+          avatar_url: string | null
           connected_at: string | null
           created_at: string
           expires_at: string | null
+          headline: string | null
           id: string
           is_connected: boolean | null
           profile_id: string | null
@@ -141,9 +143,11 @@ export type Database = {
         }
         Insert: {
           access_token?: string | null
+          avatar_url?: string | null
           connected_at?: string | null
           created_at?: string
           expires_at?: string | null
+          headline?: string | null
           id?: string
           is_connected?: boolean | null
           profile_id?: string | null
@@ -154,9 +158,11 @@ export type Database = {
         }
         Update: {
           access_token?: string | null
+          avatar_url?: string | null
           connected_at?: string | null
           created_at?: string
           expires_at?: string | null
+          headline?: string | null
           id?: string
           is_connected?: boolean | null
           profile_id?: string | null

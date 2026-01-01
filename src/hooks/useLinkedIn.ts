@@ -9,6 +9,8 @@ interface LinkedInConnection {
   is_connected: boolean;
   profile_name: string | null;
   profile_id: string | null;
+  avatar_url: string | null;
+  headline: string | null;
   connected_at: string | null;
   expires_at: string | null;
 }
@@ -24,7 +26,7 @@ export function useLinkedIn() {
       
       const { data, error } = await supabase
         .from('linkedin_connections')
-        .select('id, user_id, is_connected, profile_name, profile_id, connected_at, expires_at')
+        .select('id, user_id, is_connected, profile_name, profile_id, avatar_url, headline, connected_at, expires_at')
         .eq('user_id', user.id)
         .maybeSingle();
       

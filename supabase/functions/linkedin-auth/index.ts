@@ -96,7 +96,7 @@ serve(async (req) => {
       const tokenData = await tokenResponse.json();
       console.log('Token exchange successful');
 
-      // Get user profile info
+      // Get user profile info (userinfo endpoint returns name, picture, sub)
       const profileResponse = await fetch('https://api.linkedin.com/v2/userinfo', {
         headers: {
           'Authorization': `Bearer ${tokenData.access_token}`,
@@ -105,12 +105,18 @@ serve(async (req) => {
 
       let profileName = 'LinkedIn User';
       let profileId = '';
+      let avatarUrl = '';
+      let headline = '';
       
       if (profileResponse.ok) {
         const profileData = await profileResponse.json();
+        console.log('LinkedIn userinfo response:', JSON.stringify(profileData));
         profileName = profileData.name || profileData.given_name || 'LinkedIn User';
         profileId = profileData.sub || '';
-        console.log(`Profile retrieved: ${profileName}`);
+        avatarUrl = profileData.picture || '';
+        // Note: headline is not available in userinfo endpoint, but we store it for future use
+        headline = profileData.headline || '';
+        console.log(`Profile retrieved: ${profileName}, avatar: ${avatarUrl ? 'yes' : 'no'}`);
       }
 
       // Store tokens in database
@@ -126,6 +132,8 @@ serve(async (req) => {
           refresh_token: tokenData.refresh_token || null,
           profile_id: profileId,
           profile_name: profileName,
+          avatar_url: avatarUrl || null,
+          headline: headline || null,
           is_connected: true,
           connected_at: new Date().toISOString(),
           expires_at: expiresAt,

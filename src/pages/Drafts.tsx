@@ -330,6 +330,8 @@ export default function Drafts() {
           isGenerating={isGenerating}
           isGeneratingImage={isGeneratingImage}
           profileName={connection?.profile_name || undefined}
+          profileAvatar={connection?.avatar_url || undefined}
+          profileHeadline={connection?.headline || undefined}
         />
 
         <Dialog open={publishDialogOpen} onOpenChange={setPublishDialogOpen}>
