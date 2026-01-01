@@ -1,3 +1,4 @@
+import * as React from 'react';
 import { 
   LayoutDashboard, 
   Lightbulb, 
@@ -40,7 +41,10 @@ const settingsItems = [
   { title: 'Settings', url: '/settings', icon: Settings },
 ];
 
-export function AppSidebar() {
+export const AppSidebar = React.forwardRef<
+  HTMLDivElement,
+  React.HTMLAttributes<HTMLDivElement>
+>((props, ref) => {
   const { state } = useSidebar();
   const collapsed = state === 'collapsed';
   const location = useLocation();
@@ -49,7 +53,7 @@ export function AppSidebar() {
   const isActive = (path: string) => location.pathname === path;
 
   return (
-    <Sidebar className={cn(collapsed ? 'w-16' : 'w-64', 'transition-all duration-200')}>
+    <Sidebar ref={ref} className={cn(collapsed ? 'w-16' : 'w-64', 'transition-all duration-200')} {...props}>
       <SidebarHeader className="border-b border-sidebar-border p-4">
         <div className="flex items-center gap-3">
           <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground">
@@ -136,4 +140,6 @@ export function AppSidebar() {
       </SidebarFooter>
     </Sidebar>
   );
-}
+});
+
+AppSidebar.displayName = 'AppSidebar';
