@@ -5,14 +5,14 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { useDrafts } from '@/hooks/useDrafts';
 import { useAIGeneration } from '@/hooks/useAIGeneration';
 import { useLinkedIn } from '@/hooks/useLinkedIn';
 import { DraftEditorSheet } from '@/components/drafts/DraftEditorSheet';
 import { Plus, Edit, Trash2, Eye, CheckCircle, Send, Loader2, ChevronDown, Link, Linkedin } from 'lucide-react';
-import { PostStatus, PostDraft } from '@/types/database';
+import { PostStatus, PostDraftWithAsset } from '@/types/database';
 import { toast } from 'sonner';
 
 export default function Drafts() {
@@ -21,7 +21,7 @@ export default function Drafts() {
   const { isConnected, publishToLinkedIn, connection } = useLinkedIn();
   
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [editDraft, setEditDraft] = useState<PostDraft | null>(null);
+  const [editDraft, setEditDraft] = useState<PostDraftWithAsset | null>(null);
   const [editorOpen, setEditorOpen] = useState(false);
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
@@ -29,6 +29,7 @@ export default function Drafts() {
   const [publishDialogOpen, setPublishDialogOpen] = useState(false);
   const [publishUrl, setPublishUrl] = useState('');
   const [publishingDraftId, setPublishingDraftId] = useState<string | null>(null);
+  const [isGeneratingImage, setIsGeneratingImage] = useState(false);
 
   const handleCreate = () => {
     if (!title.trim() || !body.trim()) return;
@@ -46,7 +47,7 @@ export default function Drafts() {
     setEditDraft(null);
   };
 
-  const openEditor = (draft: PostDraft) => {
+  const openEditor = (draft: PostDraftWithAsset) => {
     setEditDraft(draft);
     setEditorOpen(true);
   };
@@ -58,7 +59,15 @@ export default function Drafts() {
       {
         onSuccess: (data) => {
           if (data.rewritten) {
-            updateDraft.mutate({ id: editDraft.id, body: data.rewritten });
+            updateDraft.mutate(
+              { id: editDraft.id, body: data.rewritten },
+              {
+                onSuccess: () => {
+                  // Update local state so the editor reflects the change
+                  setEditDraft(prev => prev ? { ...prev, body: data.rewritten } : null);
+                }
+              }
+            );
           }
         },
       }
@@ -72,12 +81,25 @@ export default function Drafts() {
       {
         onSuccess: (data) => {
           if (data.hashtags) {
-            updateDraft.mutate({
-              id: editDraft.id,
-              hashtags_broad: data.hashtags.hashtags_broad,
-              hashtags_niche: data.hashtags.hashtags_niche,
-              hashtags_trending: data.hashtags.hashtags_trending,
-            });
+            updateDraft.mutate(
+              {
+                id: editDraft.id,
+                hashtags_broad: data.hashtags.hashtags_broad,
+                hashtags_niche: data.hashtags.hashtags_niche,
+                hashtags_trending: data.hashtags.hashtags_trending,
+              },
+              {
+                onSuccess: () => {
+                  // Update local state so hashtags show immediately
+                  setEditDraft(prev => prev ? {
+                    ...prev,
+                    hashtags_broad: data.hashtags.hashtags_broad,
+                    hashtags_niche: data.hashtags.hashtags_niche,
+                    hashtags_trending: data.hashtags.hashtags_trending,
+                  } : null);
+                }
+              }
+            );
           }
         },
       }
@@ -91,7 +113,15 @@ export default function Drafts() {
       {
         onSuccess: (data) => {
           if (data.image_description) {
-            updateDraft.mutate({ id: editDraft.id, image_description: data.image_description });
+            updateDraft.mutate(
+              { id: editDraft.id, image_description: data.image_description },
+              {
+                onSuccess: () => {
+                  // Update local state so the description shows immediately
+                  setEditDraft(prev => prev ? { ...prev, image_description: data.image_description } : null);
+                }
+              }
+            );
           }
         },
       }
@@ -103,10 +133,27 @@ export default function Drafts() {
       toast.error('Add an image description first, or use "Generate Description"');
       return;
     }
-    generateImage.mutate({ prompt: editDraft.image_description, draft_id: editDraft.id });
+    setIsGeneratingImage(true);
+    generateImage.mutate(
+      { prompt: editDraft.image_description, draft_id: editDraft.id },
+      {
+        onSuccess: (data) => {
+          // Update local state so the image shows immediately
+          setEditDraft(prev => prev ? {
+            ...prev,
+            image_asset_id: data.asset_id,
+            image_asset: { id: data.asset_id, file_url: data.image_url, prompt: editDraft.image_description }
+          } : null);
+          setIsGeneratingImage(false);
+        },
+        onError: () => {
+          setIsGeneratingImage(false);
+        }
+      }
+    );
   };
 
-  const handlePublishToLinkedIn = (draft: PostDraft) => {
+  const handlePublishToLinkedIn = (draft: PostDraftWithAsset) => {
     const hashtags = [
       ...(draft.hashtags_broad || []),
       ...(draft.hashtags_niche || []),
@@ -143,7 +190,7 @@ export default function Drafts() {
     published: 'bg-chart-4/20 text-chart-4',
   };
 
-  const allHashtags = (draft: PostDraft) => [
+  const allHashtags = (draft: PostDraftWithAsset) => [
     ...(draft.hashtags_broad || []),
     ...(draft.hashtags_niche || []),
     ...(draft.hashtags_trending || []),
@@ -162,7 +209,10 @@ export default function Drafts() {
               <Button><Plus className="mr-2 h-4 w-4" /> New Draft</Button>
             </DialogTrigger>
             <DialogContent className="max-w-2xl">
-              <DialogHeader><DialogTitle>Create New Draft</DialogTitle></DialogHeader>
+              <DialogHeader>
+                <DialogTitle>Create New Draft</DialogTitle>
+                <DialogDescription>Write your LinkedIn post content below</DialogDescription>
+              </DialogHeader>
               <div className="space-y-4">
                 <Input placeholder="Post Title" value={title} onChange={(e) => setTitle(e.target.value)} />
                 <Textarea placeholder="Write your LinkedIn post here..." value={body} onChange={(e) => setBody(e.target.value)} rows={10} />
@@ -263,12 +313,16 @@ export default function Drafts() {
           onGenerateImageDescription={handleGenerateImageDescription}
           onGenerateImage={handleGenerateImage}
           isGenerating={isGenerating}
+          isGeneratingImage={isGeneratingImage}
           profileName={connection?.profile_name || undefined}
         />
 
         <Dialog open={publishDialogOpen} onOpenChange={setPublishDialogOpen}>
           <DialogContent>
-            <DialogHeader><DialogTitle>Mark as Published</DialogTitle></DialogHeader>
+            <DialogHeader>
+              <DialogTitle>Mark as Published</DialogTitle>
+              <DialogDescription>Optionally add the LinkedIn post URL for tracking</DialogDescription>
+            </DialogHeader>
             <div className="space-y-4">
               <p className="text-sm text-muted-foreground">
                 After posting on LinkedIn, paste the URL here (optional) to track performance.

@@ -1,16 +1,16 @@
 import { useState, useEffect } from 'react';
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator, DropdownMenuLabel } from '@/components/ui/dropdown-menu';
 import { LinkedInPostPreview } from './LinkedInPostPreview';
-import { PostDraft } from '@/types/database';
-import { Wand2, Hash, Image, RotateCcw, ChevronDown, Loader2, X, Save } from 'lucide-react';
+import { PostDraftWithAsset } from '@/types/database';
+import { Wand2, Hash, Image, RotateCcw, ChevronDown, Loader2, Save } from 'lucide-react';
 
 interface DraftEditorSheetProps {
-  draft: PostDraft | null;
+  draft: PostDraftWithAsset | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSave: (data: { title: string; body: string; image_description?: string }) => void;
@@ -19,6 +19,7 @@ interface DraftEditorSheetProps {
   onGenerateImageDescription: () => void;
   onGenerateImage: () => void;
   isGenerating: boolean;
+  isGeneratingImage?: boolean;
   profileName?: string;
   profileAvatar?: string;
   profileHeadline?: string;
@@ -34,6 +35,7 @@ export function DraftEditorSheet({
   onGenerateImageDescription,
   onGenerateImage,
   isGenerating,
+  isGeneratingImage,
   profileName,
   profileAvatar,
   profileHeadline,
@@ -42,13 +44,14 @@ export function DraftEditorSheet({
   const [body, setBody] = useState('');
   const [imageDescription, setImageDescription] = useState('');
 
+  // Sync state when draft changes (including after mutations update the draft)
   useEffect(() => {
     if (draft) {
       setTitle(draft.title);
       setBody(draft.body);
       setImageDescription(draft.image_description || '');
     }
-  }, [draft]);
+  }, [draft, draft?.image_description, draft?.image_asset_id]);
 
   const handleSave = () => {
     onSave({ title, body, image_description: imageDescription || undefined });
@@ -60,15 +63,18 @@ export function DraftEditorSheet({
     ...(draft?.hashtags_trending || []),
   ];
 
-  // Get the image URL if there's an attached asset
-  const imageUrl = draft?.image_asset_id ? undefined : undefined; // TODO: fetch actual image URL
+  // Get the image URL from the joined asset
+  const imageUrl = draft?.image_asset?.file_url || undefined;
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="sm:max-w-[900px] w-full p-0 flex flex-col">
         <SheetHeader className="px-6 py-4 border-b border-border shrink-0">
           <div className="flex items-center justify-between">
-            <SheetTitle>Edit Draft</SheetTitle>
+            <div>
+              <SheetTitle>Edit Draft</SheetTitle>
+              <SheetDescription>Edit your post and see a live LinkedIn preview</SheetDescription>
+            </div>
             <div className="flex items-center gap-2">
               <Button size="sm" onClick={handleSave} disabled={!title.trim() || !body.trim()}>
                 <Save className="mr-1 h-4 w-4" /> Save
@@ -152,8 +158,8 @@ export function DraftEditorSheet({
 
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button size="sm" variant="outline" disabled={isGenerating}>
-                      {isGenerating ? <Loader2 className="mr-1 h-3 w-3 animate-spin" /> : <Image className="mr-1 h-3 w-3" />}
+                    <Button size="sm" variant="outline" disabled={isGenerating || isGeneratingImage}>
+                      {(isGenerating || isGeneratingImage) ? <Loader2 className="mr-1 h-3 w-3 animate-spin" /> : <Image className="mr-1 h-3 w-3" />}
                       Image <ChevronDown className="ml-1 h-3 w-3" />
                     </Button>
                   </DropdownMenuTrigger>
@@ -179,7 +185,8 @@ export function DraftEditorSheet({
               body={body}
               hashtags={allHashtags}
               imageUrl={imageUrl}
-              imageDescription={imageDescription || draft?.image_description}
+              imageDescription={imageDescription || draft?.image_description || undefined}
+              isGeneratingImage={isGeneratingImage}
             />
           </div>
         </div>

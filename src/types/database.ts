@@ -39,6 +39,14 @@ export interface PostDraft {
   updated_at: string;
 }
 
+export interface PostDraftWithAsset extends PostDraft {
+  image_asset?: {
+    id: string;
+    file_url: string | null;
+    prompt: string | null;
+  } | null;
+}
+
 export interface Asset {
   id: string;
   file_url: string | null;
