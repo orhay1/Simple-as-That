@@ -3,6 +3,8 @@ import { Moon, Sun } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { Button } from '@/components/ui/button';
 
+const STORAGE_KEY = 'agentic-vibe-theme';
+
 export const ThemeToggle = React.forwardRef<
   HTMLButtonElement,
   React.ComponentPropsWithoutRef<typeof Button>
@@ -14,6 +16,18 @@ export const ThemeToggle = React.forwardRef<
     setMounted(true);
   }, []);
 
+  // Sync theme across tabs via storage event
+  React.useEffect(() => {
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === STORAGE_KEY && e.newValue) {
+        setTheme(e.newValue);
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, [setTheme]);
+
   if (!mounted) {
     return (
       <Button ref={ref} variant="ghost" size="icon" className="h-9 w-9" {...props}>
@@ -24,16 +38,17 @@ export const ThemeToggle = React.forwardRef<
 
   const isDark = resolvedTheme === 'dark';
 
+  const handleToggle = () => {
+    const newTheme = isDark ? 'light' : 'dark';
+    setTheme(newTheme);
+  };
+
   return (
     <Button
       ref={ref}
       variant="ghost"
       size="icon"
-      onClick={() => {
-        const newTheme = isDark ? 'light' : 'dark';
-        console.log('Theme toggle clicked, switching to:', newTheme);
-        setTheme(newTheme);
-      }}
+      onClick={handleToggle}
       className="h-9 w-9 transition-transform hover:scale-110"
       {...props}
     >
