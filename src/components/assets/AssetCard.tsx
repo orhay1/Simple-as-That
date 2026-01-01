@@ -3,9 +3,14 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { MoreVertical, Trash2, Copy, ExternalLink, Sparkles } from 'lucide-react';
+import { MoreVertical, Trash2, Copy, ExternalLink, Sparkles, AlertTriangle } from 'lucide-react';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
+
+const isValidUrl = (url: string | null | undefined): boolean => {
+  if (!url) return false;
+  return url.startsWith('http://') || url.startsWith('https://');
+};
 
 interface AssetCardProps {
   asset: Asset;
@@ -14,12 +19,16 @@ interface AssetCardProps {
 }
 
 export function AssetCard({ asset, onView, onDelete }: AssetCardProps) {
+  const validUrl = isValidUrl(asset.file_url);
+
   const handleCopyUrl = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (asset.file_url) {
-      navigator.clipboard.writeText(asset.file_url);
-      toast.success('URL copied to clipboard');
+    if (!validUrl) {
+      toast.error('Invalid image URL - please delete and regenerate');
+      return;
     }
+    navigator.clipboard.writeText(asset.file_url!);
+    toast.success('URL copied to clipboard');
   };
 
   const handleDelete = (e: React.MouseEvent) => {
@@ -74,8 +83,15 @@ export function AssetCard({ asset, onView, onDelete }: AssetCardProps) {
             </DropdownMenu>
           </div>
 
+          {/* Invalid URL Warning */}
+          {!validUrl && (
+            <Badge className="absolute top-2 left-2" variant="destructive">
+              <AlertTriangle className="mr-1 h-3 w-3" /> Invalid
+            </Badge>
+          )}
+
           {/* AI Badge */}
-          {asset.is_ai_generated && (
+          {asset.is_ai_generated && validUrl && (
             <Badge className="absolute bottom-2 left-2" variant="secondary">
               <Sparkles className="mr-1 h-3 w-3" /> AI
             </Badge>

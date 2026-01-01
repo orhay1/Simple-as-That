@@ -13,33 +13,44 @@ interface AssetDetailDialogProps {
   onDelete: (id: string) => void;
 }
 
+const isValidUrl = (url: string | null | undefined): boolean => {
+  if (!url) return false;
+  return url.startsWith('http://') || url.startsWith('https://');
+};
+
 export function AssetDetailDialog({ asset, open, onOpenChange, onDelete }: AssetDetailDialogProps) {
   if (!asset) return null;
 
+  const validUrl = isValidUrl(asset.file_url);
+
   const handleCopyUrl = () => {
-    if (asset.file_url) {
-      navigator.clipboard.writeText(asset.file_url);
-      toast.success('URL copied to clipboard');
+    if (!validUrl) {
+      toast.error('Invalid image URL - please regenerate this image');
+      return;
     }
+    navigator.clipboard.writeText(asset.file_url!);
+    toast.success('URL copied to clipboard');
   };
 
   const handleDownload = async () => {
-    if (asset.file_url) {
-      try {
-        const response = await fetch(asset.file_url);
-        const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `asset-${asset.id}.png`;
-        document.body.appendChild(a);
-        a.click();
-        window.URL.revokeObjectURL(url);
-        document.body.removeChild(a);
-        toast.success('Download started');
-      } catch {
-        toast.error('Failed to download image');
-      }
+    if (!validUrl) {
+      toast.error('Cannot download - invalid image URL');
+      return;
+    }
+    try {
+      const response = await fetch(asset.file_url!);
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `asset-${asset.id}.png`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      toast.success('Download started');
+    } catch {
+      toast.error('Failed to download image');
     }
   };
 
@@ -116,7 +127,7 @@ export function AssetDetailDialog({ asset, open, onOpenChange, onDelete }: Asset
             <Button variant="outline" size="sm" onClick={handleDownload}>
               <Download className="mr-2 h-4 w-4" /> Download
             </Button>
-            {asset.file_url && (
+            {validUrl && (
               <Button variant="outline" size="sm" onClick={() => window.open(asset.file_url!, '_blank')}>
                 <ExternalLink className="mr-2 h-4 w-4" /> Open
               </Button>
