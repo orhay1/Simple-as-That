@@ -1,10 +1,10 @@
 project_id = "mtoqksifrpvkskhmchwj"
 
 [functions.generate-content]
-verify_jwt = false
+verify_jwt = true
 
 [functions.generate-image]
-verify_jwt = false
+verify_jwt = true
 
 [functions.linkedin-auth]
 verify_jwt = false
