@@ -6,6 +6,9 @@ verify_jwt = true
 [functions.generate-image]
 verify_jwt = true
 
+[functions.suggest-guardrails]
+verify_jwt = true
+
 [functions.linkedin-auth]
 verify_jwt = false
 
