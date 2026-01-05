@@ -7,7 +7,7 @@ verify_jwt = true
 verify_jwt = true
 
 [functions.suggest-guardrails]
-verify_jwt = true
+verify_jwt = false
 
 [functions.linkedin-auth]
 verify_jwt = false
@@ -15,5 +15,5 @@ verify_jwt = false
 [functions.linkedin-post]
 verify_jwt = true
 
-[functions.suggest-guardrails]
-verify_jwt = false
+[functions.research-ai-news]
+verify_jwt = true

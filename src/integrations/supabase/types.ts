@@ -14,6 +14,57 @@ export type Database = {
   }
   public: {
     Tables: {
+      ai_news_items: {
+        Row: {
+          created_at: string | null
+          discovered_at: string | null
+          full_content: string | null
+          id: string
+          published_date: string | null
+          raw_firecrawl_response: Json | null
+          raw_perplexity_response: Json | null
+          source_name: string | null
+          source_url: string | null
+          status: string | null
+          summary: string | null
+          tags: string[] | null
+          title: string
+          tool_name: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          discovered_at?: string | null
+          full_content?: string | null
+          id?: string
+          published_date?: string | null
+          raw_firecrawl_response?: Json | null
+          raw_perplexity_response?: Json | null
+          source_name?: string | null
+          source_url?: string | null
+          status?: string | null
+          summary?: string | null
+          tags?: string[] | null
+          title: string
+          tool_name?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          discovered_at?: string | null
+          full_content?: string | null
+          id?: string
+          published_date?: string | null
+          raw_firecrawl_response?: Json | null
+          raw_perplexity_response?: Json | null
+          source_name?: string | null
+          source_url?: string | null
+          status?: string | null
+          summary?: string | null
+          tags?: string[] | null
+          title?: string
+          tool_name?: string | null
+        }
+        Relationships: []
+      }
       ai_output_ledger: {
         Row: {
           created_at: string
@@ -378,6 +429,7 @@ export type Database = {
           created_at: string
           hook: string | null
           id: string
+          news_item_id: string | null
           rationale: string | null
           source_generation_id: string | null
           status: Database["public"]["Enums"]["topic_status"]
@@ -389,6 +441,7 @@ export type Database = {
           created_at?: string
           hook?: string | null
           id?: string
+          news_item_id?: string | null
           rationale?: string | null
           source_generation_id?: string | null
           status?: Database["public"]["Enums"]["topic_status"]
@@ -400,6 +453,7 @@ export type Database = {
           created_at?: string
           hook?: string | null
           id?: string
+          news_item_id?: string | null
           rationale?: string | null
           source_generation_id?: string | null
           status?: Database["public"]["Enums"]["topic_status"]
@@ -408,6 +462,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "topic_ideas_news_item_id_fkey"
+            columns: ["news_item_id"]
+            isOneToOne: false
+            referencedRelation: "ai_news_items"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "topic_ideas_source_generation_id_fkey"
             columns: ["source_generation_id"]
