@@ -45,7 +45,7 @@ export default function Auth() {
           <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-primary text-primary-foreground">
             <Zap className="h-6 w-6" />
           </div>
-          <CardTitle className="text-2xl">Agentic Vibe</CardTitle>
+          <CardTitle className="text-2xl">Simple as That</CardTitle>
           <CardDescription>Content Studio for LinkedIn</CardDescription>
         </CardHeader>
         <CardContent>

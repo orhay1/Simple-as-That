@@ -4,7 +4,7 @@ import App from "./App.tsx";
 import "./index.css";
 
 createRoot(document.getElementById("root")!).render(
-  <ThemeProvider attribute="class" defaultTheme="dark" enableSystem disableTransitionOnChange storageKey="agentic-vibe-theme">
+  <ThemeProvider attribute="class" defaultTheme="dark" enableSystem disableTransitionOnChange storageKey="simple-as-that-theme">
     <App />
   </ThemeProvider>
 );
