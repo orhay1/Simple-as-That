@@ -3,7 +3,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.89.0";
 import { decode as base64Decode } from "https://deno.land/std@0.168.0/encoding/base64.ts";
 
-const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
+const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
 const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
@@ -13,6 +13,8 @@ const corsHeaders = {
 };
 
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+const DEFAULT_IMAGE_MODEL = 'google/gemini-3-pro-image-preview';
 
 interface GenerateImageRequest {
   prompt: string;
@@ -68,37 +70,68 @@ serve(async (req) => {
       throw new Error('Prompt is required');
     }
 
-    // Call OpenAI image generation - request b64_json format
-    const response = await fetch('https://api.openai.com/v1/images/generations', {
+    // Fetch image model from settings
+    const { data: modelSetting } = await supabase
+      .from('settings')
+      .select('value')
+      .eq('key', 'image_generation_model')
+      .single();
+
+    const selectedModel = modelSetting?.value || DEFAULT_IMAGE_MODEL;
+    console.log('Using image model:', selectedModel);
+
+    // Call Lovable AI Gateway for image generation
+    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${openAIApiKey}`,
+        'Authorization': `Bearer ${LOVABLE_API_KEY}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-image-1',
-        prompt: `Professional LinkedIn post image: ${prompt}. Clean, modern, business-appropriate style.`,
-        n: 1,
-        size: '1024x1024',
-        quality: 'high',
+        model: selectedModel,
+        messages: [
+          { 
+            role: 'user', 
+            content: `Professional LinkedIn post image: ${prompt}. Clean, modern, business-appropriate style.`
+          }
+        ],
+        modalities: ['image', 'text']
       }),
     });
 
     if (!response.ok) {
+      if (response.status === 429) {
+        console.error('Rate limit exceeded');
+        return new Response(JSON.stringify({ error: 'Rate limits exceeded, please try again later.' }), {
+          status: 429,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      if (response.status === 402) {
+        console.error('Payment required');
+        return new Response(JSON.stringify({ error: 'Payment required, please add funds to your Lovable AI workspace.' }), {
+          status: 402,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
       const error = await response.text();
-      console.error('OpenAI Image API error:', error);
-      throw new Error(`OpenAI Image API error: ${error}`);
+      console.error('Lovable AI Gateway error:', error);
+      throw new Error(`Lovable AI Gateway error: ${error}`);
     }
 
     const data = await response.json();
-    console.log('OpenAI response received');
+    console.log('Lovable AI response received');
 
-    // Get the base64 data from OpenAI response
-    const base64Data = data.data[0].b64_json;
-    if (!base64Data) {
-      throw new Error('No image data received from OpenAI');
+    // Get the base64 data from response
+    const imageDataUrl = data.choices?.[0]?.message?.images?.[0]?.image_url?.url;
+    if (!imageDataUrl) {
+      console.error('No image data in response:', JSON.stringify(data));
+      throw new Error('No image data received from Lovable AI');
     }
 
+    // Strip the data URL prefix to get raw base64
+    const base64Data = imageDataUrl.replace(/^data:image\/\w+;base64,/, '');
+    
     // Decode base64 to binary
     const binaryData = base64Decode(base64Data);
     console.log('Image decoded, size:', binaryData.length, 'bytes');
@@ -127,14 +160,14 @@ serve(async (req) => {
     const publicUrl = urlData.publicUrl;
     console.log('Image uploaded to storage:', publicUrl);
 
-    // Create asset record with public URL (not base64!)
+    // Create asset record with public URL
     const { data: asset, error: assetError } = await supabase
       .from('assets')
       .insert({
         file_url: publicUrl,
         prompt: prompt,
         is_ai_generated: true,
-        metadata: { model: 'gpt-image-1', size: '1024x1024', storage_path: fileName },
+        metadata: { model: selectedModel, storage_path: fileName },
       })
       .select()
       .single();
@@ -158,7 +191,7 @@ serve(async (req) => {
       user_prompt: prompt,
       raw_output: JSON.stringify({ storage_path: fileName }),
       parsed_output: { image_url: publicUrl, asset_id: asset?.id },
-      model: 'gpt-image-1',
+      model: selectedModel,
       created_entity_type: 'assets',
       created_entity_id: asset?.id,
     });
