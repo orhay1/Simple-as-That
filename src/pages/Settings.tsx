@@ -8,7 +8,8 @@ import { Badge } from '@/components/ui/badge';
 import { useLinkedIn } from '@/hooks/useLinkedIn';
 import { PromptsTab } from '@/components/settings/PromptsTab';
 import { GuardrailsTab } from '@/components/settings/GuardrailsTab';
-import { Linkedin, FileText, Shield, CheckCircle, AlertCircle, Loader2, LogOut } from 'lucide-react';
+import { ResearchTab } from '@/components/settings/ResearchTab';
+import { Linkedin, FileText, Shield, CheckCircle, AlertCircle, Loader2, LogOut, Search } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 
@@ -37,7 +38,7 @@ export default function Settings() {
         </div>
         
         <Tabs defaultValue="linkedin" className="space-y-4">
-          <TabsList className="grid w-full grid-cols-3 lg:w-auto lg:inline-grid">
+          <TabsList className="grid w-full grid-cols-4 lg:w-auto lg:inline-grid">
             <TabsTrigger value="linkedin" className="gap-2">
               <Linkedin className="h-4 w-4" />
               <span className="hidden sm:inline">LinkedIn</span>
@@ -45,6 +46,10 @@ export default function Settings() {
             <TabsTrigger value="prompts" className="gap-2">
               <FileText className="h-4 w-4" />
               <span className="hidden sm:inline">Prompts</span>
+            </TabsTrigger>
+            <TabsTrigger value="research" className="gap-2">
+              <Search className="h-4 w-4" />
+              <span className="hidden sm:inline">Research</span>
             </TabsTrigger>
             <TabsTrigger value="guardrails" className="gap-2">
               <Shield className="h-4 w-4" />
@@ -136,6 +141,10 @@ export default function Settings() {
           
           <TabsContent value="prompts">
             <PromptsTab />
+          </TabsContent>
+
+          <TabsContent value="research">
+            <ResearchTab />
           </TabsContent>
           
           <TabsContent value="guardrails">
