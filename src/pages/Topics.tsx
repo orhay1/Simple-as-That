@@ -27,11 +27,9 @@ export default function Topics() {
   };
 
   const handleCreateDraftFromNews = (item: NewsItem) => {
-    const draftBody = `${item.summary || ''}\n\n${item.full_content ? item.full_content.substring(0, 1000) : ''}\n\nSource: ${item.source_url || ''}`;
-    
     createDraft.mutate({
       title: item.title,
-      body: draftBody,
+      body: item.summary || '',
     });
     updateStatus.mutate({ id: item.id, status: 'used' });
     toast.success('Draft created from AI news');
@@ -90,11 +88,9 @@ export default function Topics() {
     const itemsToConvert = newsItems.filter(item => selectedIds.has(item.id) && item.status !== 'used');
     
     itemsToConvert.forEach(item => {
-      const draftBody = `${item.summary || ''}\n\n${item.full_content ? item.full_content.substring(0, 1000) : ''}\n\nSource: ${item.source_url || ''}`;
-      
       createDraft.mutate({
         title: item.title,
-        body: draftBody,
+        body: item.summary || '',
       });
       updateStatus.mutate({ id: item.id, status: 'used' });
     });
