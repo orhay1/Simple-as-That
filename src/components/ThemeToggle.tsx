@@ -3,7 +3,7 @@ import { Moon, Sun } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { Button } from '@/components/ui/button';
 
-const STORAGE_KEY = 'agentic-vibe-theme';
+const STORAGE_KEY = 'simple-as-that-theme';
 
 export const ThemeToggle = React.forwardRef<
   HTMLButtonElement,
