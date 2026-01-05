@@ -84,6 +84,12 @@ export function useNewsResearch() {
   // Delete news item
   const deleteNewsItem = useMutation({
     mutationFn: async (id: string) => {
+      // First, unlink any topic_ideas referencing this news item
+      await supabase
+        .from('topic_ideas')
+        .update({ news_item_id: null })
+        .eq('news_item_id', id);
+      
       const { error } = await supabase
         .from('ai_news_items')
         .delete()
