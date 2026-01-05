@@ -199,6 +199,7 @@ serve(async (req) => {
 
     // Step 2: Optionally enrich with Firecrawl for additional context
     const enrichedItems = [];
+    const lovableApiKey = Deno.env.get('LOVABLE_API_KEY');
     
     for (const item of newsItems) {
       let enrichedItem = {
@@ -206,6 +207,7 @@ serve(async (req) => {
         full_content: null,
         raw_perplexity_response: perplexityData,
         raw_firecrawl_response: null,
+        polished_summary: null,
       };
 
       // Only scrape if we have Firecrawl key and a source URL
@@ -231,7 +233,6 @@ serve(async (req) => {
             
             // Clean and limit the content
             if (rawContent) {
-              // Take first 2000 chars to avoid overly long content
               enrichedItem.full_content = rawContent.substring(0, 2000);
             }
             enrichedItem.raw_firecrawl_response = firecrawlData;
@@ -244,14 +245,72 @@ serve(async (req) => {
         }
       }
 
+      // Step 3: Polish the summary with AI to make it human-readable
+      if (lovableApiKey) {
+        try {
+          console.log(`Polishing summary for: ${item.title}`);
+          
+          const polishPrompt = `You are a professional LinkedIn content writer. Transform the following AI tool research into a compelling, human-readable summary.
+
+TOOL DATA:
+- Name: ${item.tool_name || item.title}
+- Raw Summary: ${typeof item.summary === 'object' ? JSON.stringify(item.summary) : item.summary}
+${enrichedItem.full_content ? `- Additional Context: ${enrichedItem.full_content.substring(0, 1000)}` : ''}
+
+Write a 3-4 paragraph summary that:
+1. Opens with an engaging hook about what problem this tool solves
+2. Explains how it works in accessible language (avoid technical jargon unless necessary)
+3. Highlights 2-3 key benefits with real-world examples
+4. Ends with who should consider using this tool
+
+Style guidelines:
+- Professional but conversational, like explaining to a colleague over coffee
+- Use active voice and storytelling
+- Avoid generic phrases like "This tool is..." or "It provides..."
+- Include any notable stats (GitHub stars, user count) if available
+- Keep it concise but engaging
+
+Return ONLY the polished summary text, no JSON, no formatting, no headers.`;
+
+          const polishResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${lovableApiKey}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              model: 'google/gemini-2.5-flash',
+              messages: [
+                { role: 'user', content: polishPrompt }
+              ],
+            }),
+          });
+
+          if (polishResponse.ok) {
+            const polishData = await polishResponse.json();
+            const polishedText = polishData.choices?.[0]?.message?.content;
+            if (polishedText) {
+              enrichedItem.polished_summary = polishedText.trim();
+              console.log(`Successfully polished summary for: ${item.title}`);
+            }
+          } else {
+            const errorText = await polishResponse.text();
+            console.warn(`AI polish failed for ${item.title}: ${polishResponse.status}`, errorText);
+          }
+        } catch (polishError) {
+          console.warn(`Error polishing ${item.title}:`, polishError);
+        }
+      }
+
       enrichedItems.push(enrichedItem);
     }
 
-    // Step 3: Store in database
+    // Step 4: Store in database
     console.log('Storing tools in database...');
     const insertData = enrichedItems.map(item => ({
       title: item.title || 'Untitled Tool',
-      summary: item.summary || null,
+      // Use polished summary if available, otherwise fall back to original
+      summary: item.polished_summary || (typeof item.summary === 'object' ? JSON.stringify(item.summary) : item.summary) || null,
       full_content: item.full_content || null,
       source_url: item.source_url || null,
       source_name: item.source_name || null,
