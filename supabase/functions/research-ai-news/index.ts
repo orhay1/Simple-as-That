@@ -6,13 +6,55 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Default prompts - can be overridden via settings
+const DEFAULT_PERPLEXITY_SYSTEM_PROMPT = `You are an expert AI industry analyst and researcher specializing in artificial intelligence tools, platforms, and industry developments. Your task is to find and analyze the most significant, recent AI news that would resonate with a professional LinkedIn audience.
+
+RESEARCH FOCUS:
+- New AI tool launches and major feature updates
+- Funding rounds and acquisitions in the AI space
+- Breakthrough research papers with practical applications
+- Enterprise AI adoption stories and case studies
+- Open source AI releases and community developments
+- AI policy and regulatory developments with business impact
+
+OUTPUT REQUIREMENTS:
+For each news item, provide:
+1. title: A clear, compelling headline (max 100 chars) that captures the essence
+2. summary: A 2-3 sentence summary explaining:
+   - What happened/was announced
+   - Why it matters for professionals
+   - Key implications or opportunities
+3. source_url: The primary, authoritative source URL (prefer official announcements, reputable tech publications)
+4. tool_name: The specific AI tool, company, or platform involved (if applicable)
+5. tags: An array of 3-5 relevant tags from categories like:
+   - Technology type: ["llm", "image-generation", "video-ai", "voice-ai", "agents", "rag", "fine-tuning"]
+   - Use case: ["productivity", "coding", "creative", "enterprise", "research", "automation"]
+   - Category: ["launch", "update", "funding", "open-source", "research", "regulation"]
+
+QUALITY CRITERIA:
+- Prioritize news from the last 7 days
+- Focus on actionable insights, not just announcements
+- Avoid rumors or unverified claims
+- Prefer items with clear business or practical relevance
+- Include a mix of big tech and innovative startups
+
+Return a JSON array of 5-7 high-quality news items. No markdown formatting, just the raw JSON array.`;
+
+const DEFAULT_PERPLEXITY_USER_PROMPT = `Find the latest and most significant AI tools, launches, and updates from this week. Focus on:
+1. Major product launches or significant feature updates from AI companies
+2. Notable funding rounds or acquisitions
+3. Open source releases that developers should know about
+4. Interesting use cases or adoption stories
+
+Prioritize items that would make engaging LinkedIn content for a tech-savvy professional audience.`;
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const { query = 'latest AI tools launches and updates this week' } = await req.json();
+    const { query } = await req.json();
     
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -29,7 +71,31 @@ serve(async (req) => {
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    console.log('Starting AI news research with query:', query);
+    // Fetch custom prompts from settings
+    console.log('Fetching custom prompts from settings...');
+    const { data: settings } = await supabase
+      .from('settings')
+      .select('key, value')
+      .in('key', ['perplexity_system_prompt', 'perplexity_user_prompt']);
+
+    const settingsMap: Record<string, string> = {};
+    settings?.forEach(s => {
+      if (typeof s.value === 'string') {
+        settingsMap[s.key] = s.value;
+      } else if (s.value && typeof s.value === 'object') {
+        settingsMap[s.key] = JSON.stringify(s.value);
+      }
+    });
+
+    const systemPrompt = settingsMap['perplexity_system_prompt'] || DEFAULT_PERPLEXITY_SYSTEM_PROMPT;
+    const userPrompt = query || settingsMap['perplexity_user_prompt'] || DEFAULT_PERPLEXITY_USER_PROMPT;
+
+    console.log('Starting AI news research with prompts:', {
+      systemPromptLength: systemPrompt.length,
+      userPromptLength: userPrompt.length,
+      usingCustomSystem: !!settingsMap['perplexity_system_prompt'],
+      usingCustomUser: !!query || !!settingsMap['perplexity_user_prompt']
+    });
 
     // Step 1: Search with Perplexity
     console.log('Calling Perplexity API...');
@@ -42,21 +108,8 @@ serve(async (req) => {
       body: JSON.stringify({
         model: 'sonar',
         messages: [
-          {
-            role: 'system',
-            content: `You are an AI news researcher. Find the latest AI tools, launches, and significant updates. For each item, provide:
-- title: Clear, descriptive title
-- summary: 2-3 sentence summary of what it is and why it matters
-- source_url: The primary source URL (must be a valid URL)
-- tool_name: The name of the AI tool or company if applicable
-- tags: Array of relevant tags like ["llm", "image-generation", "productivity"]
-
-Return a JSON array of 3-5 news items. Focus on actionable, interesting items that would make good LinkedIn content for a tech audience.`
-          },
-          {
-            role: 'user',
-            content: query
-          }
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt }
         ],
         temperature: 0.3,
         search_recency_filter: 'week',
@@ -91,6 +144,7 @@ Return a JSON array of 3-5 news items. Focus on actionable, interesting items th
       }
     } catch (parseError) {
       console.error('Failed to parse Perplexity response as JSON:', parseError);
+      console.log('Raw content:', content);
       // Create a single item from the text response
       newsItems = [{
         title: 'AI News Summary',
