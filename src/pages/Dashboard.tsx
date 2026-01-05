@@ -1,29 +1,29 @@
 import { AppLayout } from '@/components/layout/AppLayout';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { useTopics } from '@/hooks/useTopics';
+import { useNewsResearch } from '@/hooks/useNewsResearch';
 import { useDrafts } from '@/hooks/useDrafts';
 import { usePublications } from '@/hooks/usePublications';
 import { useNavigate } from 'react-router-dom';
-import { Lightbulb, FileEdit, BarChart3, Plus, ArrowRight } from 'lucide-react';
+import { Sparkles, FileEdit, CheckCircle, Send, ArrowRight } from 'lucide-react';
 
 export default function Dashboard() {
-  const { topics } = useTopics();
+  const { newsItems } = useNewsResearch();
   const { drafts } = useDrafts();
   const { publications } = usePublications();
   const navigate = useNavigate();
 
-  const newTopics = topics.filter(t => t.status === 'new').length;
-  const shortlistedTopics = topics.filter(t => t.status === 'shortlisted').length;
+  const aiToolsCount = newsItems.length;
   const draftCount = drafts.filter(d => d.status === 'draft').length;
-  const readyCount = drafts.filter(d => d.status === 'approved').length;
+  const approvedCount = drafts.filter(d => d.status === 'approved').length;
+  const publishedCount = publications.length;
 
   const stats = [
-    { title: 'New Topics', value: newTopics, icon: Lightbulb, color: 'text-chart-1' },
-    { title: 'Shortlisted', value: shortlistedTopics, icon: Lightbulb, color: 'text-chart-2' },
-    { title: 'Drafts', value: draftCount, icon: FileEdit, color: 'text-chart-3' },
-    { title: 'Ready to Publish', value: readyCount, icon: BarChart3, color: 'text-chart-4' },
+    { title: 'AI Tools Researched', value: aiToolsCount, icon: Sparkles, color: 'text-chart-1' },
+    { title: 'Drafts', value: draftCount, icon: FileEdit, color: 'text-chart-2' },
+    { title: 'Approved', value: approvedCount, icon: CheckCircle, color: 'text-chart-3' },
+    { title: 'Published', value: publishedCount, icon: Send, color: 'text-chart-4' },
   ];
 
   return (
@@ -52,23 +52,23 @@ export default function Dashboard() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center justify-between">
-                Recent Topics
+                Recent AI Tools
                 <Button size="sm" variant="outline" onClick={() => navigate('/topics')}>
-                  <Plus className="mr-1 h-4 w-4" /> Generate
+                  <Sparkles className="mr-1 h-4 w-4" /> Research
                 </Button>
               </CardTitle>
             </CardHeader>
             <CardContent>
-              {topics.slice(0, 5).map((topic) => (
-                <div key={topic.id} className="flex items-center justify-between border-b border-border py-3 last:border-0">
+              {newsItems.slice(0, 5).map((item) => (
+                <div key={item.id} className="flex items-center justify-between border-b border-border py-3 last:border-0">
                   <div className="flex-1">
-                    <p className="font-medium text-foreground">{topic.title}</p>
-                    <p className="text-sm text-muted-foreground line-clamp-1">{topic.hook}</p>
+                    <p className="font-medium text-foreground">{item.tool_name || item.title}</p>
+                    <p className="text-sm text-muted-foreground line-clamp-1">{item.summary}</p>
                   </div>
-                  <Badge variant={topic.status === 'shortlisted' ? 'default' : 'secondary'}>{topic.status}</Badge>
+                  <Badge variant={item.status === 'used' ? 'default' : 'secondary'}>{item.status}</Badge>
                 </div>
               ))}
-              {topics.length === 0 && <p className="text-center text-muted-foreground py-8">No topics yet. Generate some!</p>}
+              {newsItems.length === 0 && <p className="text-center text-muted-foreground py-8">No AI tools yet. Research some!</p>}
             </CardContent>
           </Card>
 
@@ -91,7 +91,7 @@ export default function Dashboard() {
                   <Badge variant={draft.status === 'approved' ? 'default' : 'secondary'}>{draft.status}</Badge>
                 </div>
               ))}
-              {drafts.length === 0 && <p className="text-center text-muted-foreground py-8">No drafts yet. Create one from a topic!</p>}
+              {drafts.length === 0 && <p className="text-center text-muted-foreground py-8">No drafts yet. Create one from an AI tool!</p>}
             </CardContent>
           </Card>
         </div>
