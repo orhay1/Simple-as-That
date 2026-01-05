@@ -10,7 +10,7 @@ import { PromptsTab } from '@/components/settings/PromptsTab';
 import { VoiceStyleTab } from '@/components/settings/VoiceStyleTab';
 import { ImageSettingsTab } from '@/components/settings/ImageSettingsTab';
 import { GuardrailsTab } from '@/components/settings/GuardrailsTab';
-import { Linkedin, FileText, Shield, CheckCircle, AlertCircle, Loader2, LogOut, Mic, Image } from 'lucide-react';
+import { Linkedin, FileText, Shield, CheckCircle, AlertCircle, Loader2, LogOut, Type, Image } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 
@@ -57,7 +57,7 @@ export default function Settings() {
               <span className="hidden sm:inline">Prompts</span>
             </TabsTrigger>
             <TabsTrigger value="voice" className="gap-2">
-              <Mic className="h-4 w-4" />
+              <Type className="h-4 w-4" />
               <span className="hidden sm:inline">Tone</span>
             </TabsTrigger>
             <TabsTrigger value="images" className="gap-2">
