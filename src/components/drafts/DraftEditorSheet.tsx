@@ -20,9 +20,9 @@ interface DraftEditorSheetProps {
   onOpenChange: (open: boolean) => void;
   onSave: (data: { title: string; body: string; image_description?: string }) => void;
   onRewrite: (body: string, action: string) => void;
-  onGenerateHashtags: () => void;
-  onGenerateImageDescription: () => void;
-  onGenerateImage: () => void;
+  onGenerateHashtags: (title: string, body: string) => void;
+  onGenerateImageDescription: (title: string, body: string) => void;
+  onGenerateImage: (imageDescription: string) => void;
   onAttachAsset: (assetId: string) => void;
   isGenerating: boolean;
   isGeneratingImage?: boolean;
@@ -58,14 +58,14 @@ export function DraftEditorSheet({
     onAttachAsset(asset.id);
   };
 
-  // Sync state when draft changes (including after mutations update the draft)
+  // Only sync state when opening editor with a new draft (not on every draft change)
   useEffect(() => {
-    if (draft) {
+    if (open && draft) {
       setTitle(draft.title);
       setBody(draft.body);
       setImageDescription(draft.image_description || '');
     }
-  }, [draft, draft?.image_description, draft?.image_asset_id]);
+  }, [open, draft?.id]);
 
   const handleSave = () => {
     onSave({ title, body, image_description: imageDescription || undefined });
@@ -171,7 +171,7 @@ export function DraftEditorSheet({
                   </DropdownMenuContent>
                 </DropdownMenu>
 
-                <Button size="sm" variant="outline" onClick={onGenerateHashtags} disabled={isGenerating}>
+                <Button size="sm" variant="outline" onClick={() => onGenerateHashtags(title, body)} disabled={isGenerating}>
                   {isGenerating ? <Loader2 className="mr-1 h-3 w-3 animate-spin" /> : <Hash className="mr-1 h-3 w-3" />}
                   Hashtags
                 </Button>
@@ -184,10 +184,10 @@ export function DraftEditorSheet({
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent>
-                    <DropdownMenuItem onClick={onGenerateImageDescription}>
+                    <DropdownMenuItem onClick={() => onGenerateImageDescription(title, body)}>
                       <Wand2 className="mr-2 h-4 w-4" /> Generate Description
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={onGenerateImage} disabled={!imageDescription && !draft?.image_description}>
+                    <DropdownMenuItem onClick={() => onGenerateImage(imageDescription)} disabled={!imageDescription}>
                       <Image className="mr-2 h-4 w-4" /> Generate Image
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />

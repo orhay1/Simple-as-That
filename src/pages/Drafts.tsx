@@ -73,73 +73,49 @@ export default function Drafts() {
     );
   };
 
-  const handleGenerateHashtags = () => {
+  const handleGenerateHashtags = (title: string, body: string) => {
     if (!editDraft) return;
     generateContent.mutate(
-      { type: 'hashtags', inputs: { body: editDraft.body, title: editDraft.title } },
+      { type: 'hashtags', inputs: { body, title } },
       {
         onSuccess: (data) => {
           if (data.hashtags) {
-            updateDraft.mutate(
-              {
-                id: editDraft.id,
-                hashtags_broad: data.hashtags.hashtags_broad,
-                hashtags_niche: data.hashtags.hashtags_niche,
-                hashtags_trending: data.hashtags.hashtags_trending,
-              },
-              {
-                onSuccess: () => {
-                  setEditDraft(prev => prev ? {
-                    ...prev,
-                    hashtags_broad: data.hashtags.hashtags_broad,
-                    hashtags_niche: data.hashtags.hashtags_niche,
-                    hashtags_trending: data.hashtags.hashtags_trending,
-                  } : null);
-                }
-              }
-            );
+            updateDraft.mutate({
+              id: editDraft.id,
+              hashtags_broad: data.hashtags.hashtags_broad,
+              hashtags_niche: data.hashtags.hashtags_niche,
+              hashtags_trending: data.hashtags.hashtags_trending,
+            });
           }
         },
       }
     );
   };
 
-  const handleGenerateImageDescription = () => {
+  const handleGenerateImageDescription = (title: string, body: string) => {
     if (!editDraft) return;
     generateContent.mutate(
-      { type: 'image_description', inputs: { title: editDraft.title, body: editDraft.body } },
+      { type: 'image_description', inputs: { title, body } },
       {
         onSuccess: (data) => {
           if (data.image_description) {
-            updateDraft.mutate(
-              { id: editDraft.id, image_description: data.image_description },
-              {
-                onSuccess: () => {
-                  setEditDraft(prev => prev ? { ...prev, image_description: data.image_description } : null);
-                }
-              }
-            );
+            updateDraft.mutate({ id: editDraft.id, image_description: data.image_description });
           }
         },
       }
     );
   };
 
-  const handleGenerateImage = () => {
-    if (!editDraft?.image_description) {
+  const handleGenerateImage = (imageDescription: string) => {
+    if (!editDraft || !imageDescription) {
       toast.error('Add an image description first, or use "Generate Description"');
       return;
     }
     setIsGeneratingImage(true);
     generateImage.mutate(
-      { prompt: editDraft.image_description, draft_id: editDraft.id },
+      { prompt: imageDescription, draft_id: editDraft.id },
       {
-        onSuccess: (data) => {
-          setEditDraft(prev => prev ? {
-            ...prev,
-            image_asset_id: data.asset_id,
-            image_asset: { id: data.asset_id, file_url: data.image_url, prompt: editDraft.image_description }
-          } : null);
+        onSuccess: () => {
           setIsGeneratingImage(false);
         },
         onError: () => {
