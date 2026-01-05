@@ -4,6 +4,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.89.0";
 import { decode as base64Decode } from "https://deno.land/std@0.168.0/encoding/base64.ts";
 
 const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
+const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY');
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
 const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
@@ -19,6 +20,88 @@ const DEFAULT_IMAGE_MODEL = 'google/gemini-3-pro-image-preview';
 interface GenerateImageRequest {
   prompt: string;
   draft_id?: string;
+}
+
+async function generateWithLovableAI(prompt: string, model: string): Promise<string> {
+  console.log('Using Lovable AI with model:', model);
+  
+  const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model: model,
+      messages: [
+        { 
+          role: 'user', 
+          content: `Professional LinkedIn post image: ${prompt}. Clean, modern, business-appropriate style.`
+        }
+      ],
+      modalities: ['image', 'text']
+    }),
+  });
+
+  if (!response.ok) {
+    if (response.status === 429) {
+      throw new Error('RATE_LIMIT: Rate limits exceeded, please try again later.');
+    }
+    if (response.status === 402) {
+      throw new Error('PAYMENT_REQUIRED: Payment required, please add funds to your Lovable AI workspace.');
+    }
+    const error = await response.text();
+    throw new Error(`Lovable AI Gateway error: ${error}`);
+  }
+
+  const data = await response.json();
+  const imageDataUrl = data.choices?.[0]?.message?.images?.[0]?.image_url?.url;
+  
+  if (!imageDataUrl) {
+    console.error('No image data in response:', JSON.stringify(data));
+    throw new Error('No image data received from Lovable AI');
+  }
+
+  // Strip the data URL prefix to get raw base64
+  return imageDataUrl.replace(/^data:image\/\w+;base64,/, '');
+}
+
+async function generateWithOpenAI(prompt: string): Promise<string> {
+  console.log('Using OpenAI DALL-E 3');
+  
+  if (!OPENAI_API_KEY) {
+    throw new Error('OpenAI API key not configured. Please add OPENAI_API_KEY in secrets.');
+  }
+
+  const response = await fetch('https://api.openai.com/v1/images/generations', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${OPENAI_API_KEY}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model: 'gpt-image-1',
+      prompt: `Professional LinkedIn post image: ${prompt}. Clean, modern, business-appropriate style.`,
+      n: 1,
+      size: '1024x1024',
+      quality: 'high',
+    }),
+  });
+
+  if (!response.ok) {
+    const error = await response.text();
+    console.error('OpenAI Image API error:', error);
+    throw new Error(`OpenAI Image API error: ${error}`);
+  }
+
+  const data = await response.json();
+  const base64Data = data.data[0].b64_json;
+  
+  if (!base64Data) {
+    throw new Error('No image data received from OpenAI');
+  }
+
+  return base64Data;
 }
 
 serve(async (req) => {
@@ -80,58 +163,15 @@ serve(async (req) => {
     const selectedModel = modelSetting?.value || DEFAULT_IMAGE_MODEL;
     console.log('Using image model:', selectedModel);
 
-    // Call Lovable AI Gateway for image generation
-    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${LOVABLE_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: selectedModel,
-        messages: [
-          { 
-            role: 'user', 
-            content: `Professional LinkedIn post image: ${prompt}. Clean, modern, business-appropriate style.`
-          }
-        ],
-        modalities: ['image', 'text']
-      }),
-    });
-
-    if (!response.ok) {
-      if (response.status === 429) {
-        console.error('Rate limit exceeded');
-        return new Response(JSON.stringify({ error: 'Rate limits exceeded, please try again later.' }), {
-          status: 429,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
-      }
-      if (response.status === 402) {
-        console.error('Payment required');
-        return new Response(JSON.stringify({ error: 'Payment required, please add funds to your Lovable AI workspace.' }), {
-          status: 402,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
-      }
-      const error = await response.text();
-      console.error('Lovable AI Gateway error:', error);
-      throw new Error(`Lovable AI Gateway error: ${error}`);
-    }
-
-    const data = await response.json();
-    console.log('Lovable AI response received');
-
-    // Get the base64 data from response
-    const imageDataUrl = data.choices?.[0]?.message?.images?.[0]?.image_url?.url;
-    if (!imageDataUrl) {
-      console.error('No image data in response:', JSON.stringify(data));
-      throw new Error('No image data received from Lovable AI');
-    }
-
-    // Strip the data URL prefix to get raw base64
-    const base64Data = imageDataUrl.replace(/^data:image\/\w+;base64,/, '');
+    // Generate image based on selected model
+    let base64Data: string;
     
+    if (selectedModel === 'openai/gpt-image-1') {
+      base64Data = await generateWithOpenAI(prompt);
+    } else {
+      base64Data = await generateWithLovableAI(prompt, selectedModel);
+    }
+
     // Decode base64 to binary
     const binaryData = base64Decode(base64Data);
     console.log('Image decoded, size:', binaryData.length, 'bytes');
@@ -204,6 +244,21 @@ serve(async (req) => {
     });
   } catch (error: any) {
     console.error('Error in generate-image function:', error);
+    
+    // Handle specific error types
+    if (error.message?.startsWith('RATE_LIMIT:')) {
+      return new Response(JSON.stringify({ error: error.message.replace('RATE_LIMIT: ', '') }), {
+        status: 429,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+    if (error.message?.startsWith('PAYMENT_REQUIRED:')) {
+      return new Response(JSON.stringify({ error: error.message.replace('PAYMENT_REQUIRED: ', '') }), {
+        status: 402,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+    
     return new Response(JSON.stringify({ error: error.message || 'Unknown error' }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
