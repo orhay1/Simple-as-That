@@ -160,7 +160,15 @@ serve(async (req) => {
       .eq('key', 'image_generation_model')
       .single();
 
-    const selectedModel = modelSetting?.value || DEFAULT_IMAGE_MODEL;
+    // Parse the model value - it may be stored as a JSON string with quotes
+    let selectedModel = DEFAULT_IMAGE_MODEL;
+    if (modelSetting?.value) {
+      const rawValue = modelSetting.value;
+      // Handle both JSON-encoded strings and plain strings
+      selectedModel = typeof rawValue === 'string' 
+        ? rawValue.replace(/^"|"$/g, '') 
+        : String(rawValue);
+    }
     console.log('Using image model:', selectedModel);
 
     // Generate image based on selected model
