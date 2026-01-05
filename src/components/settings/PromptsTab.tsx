@@ -203,6 +203,42 @@ export function PromptsTab() {
           </Collapsible>
         </CardHeader>
       </Card>
+
+      {/* Image Generation Settings */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Image Generation</CardTitle>
+          <CardDescription>
+            Choose the AI model for generating images
+            {!isManager && <span className="ml-1 text-amber-500">(View only - Manager access required)</span>}
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-2">
+            <Label htmlFor="image_generation_model">Image Model</Label>
+            <Select
+              value={getVoiceSetting('image_generation_model') || 'google/gemini-3-pro-image-preview'}
+              onValueChange={(value) => handleSaveVoiceSetting('image_generation_model', value)}
+              disabled={!isManager}
+            >
+              <SelectTrigger id="image_generation_model">
+                <SelectValue placeholder="Select image model" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="google/gemini-3-pro-image-preview">
+                  Gemini 3 Pro Image (Higher Quality, Default)
+                </SelectItem>
+                <SelectItem value="google/gemini-2.5-flash-image-preview">
+                  Gemini 2.5 Flash Image (Faster)
+                </SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              Gemini 3 Pro produces higher quality images but may be slower. Gemini 2.5 Flash is faster but with slightly lower quality.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
