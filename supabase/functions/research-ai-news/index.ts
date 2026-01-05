@@ -54,10 +54,48 @@ serve(async (req) => {
   }
 
   try {
-    const { query } = await req.json();
-    
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    // Verify authentication
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      console.error('Missing authorization header');
+      return new Response(
+        JSON.stringify({ success: false, error: 'Unauthorized' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const token = authHeader.replace('Bearer ', '');
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    
+    if (authError || !user) {
+      console.error('Invalid token:', authError?.message);
+      return new Response(
+        JSON.stringify({ success: false, error: 'Invalid token' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Verify user has manager role (research uses API credits)
+    const { data: roleData } = await supabase
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', user.id)
+      .single();
+
+    if (!roleData || roleData.role !== 'manager') {
+      console.error('Insufficient permissions for user:', user.id);
+      return new Response(
+        JSON.stringify({ success: false, error: 'Manager role required for research' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const { query } = await req.json();
+    
     const perplexityKey = Deno.env.get('PERPLEXITY_API_KEY');
     const firecrawlKey = Deno.env.get('FIRECRAWL_API_KEY');
 
@@ -69,7 +107,7 @@ serve(async (req) => {
       );
     }
 
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    console.log(`Research initiated by user ${user.id}`);
 
     // Fetch custom prompts from settings
     console.log('Fetching custom prompts from settings...');
