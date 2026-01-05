@@ -20,7 +20,7 @@ export function useTopics() {
   });
 
   const createTopic = useMutation({
-    mutationFn: async (topic: { title: string; rationale?: string; hook?: string; tags?: string[]; status?: TopicStatus; source_generation_id?: string }) => {
+    mutationFn: async (topic: { title: string; rationale?: string; hook?: string; tags?: string[]; status?: TopicStatus; source_generation_id?: string; news_item_id?: string }) => {
       const { data, error } = await supabase
         .from('topic_ideas')
         .insert([topic])
