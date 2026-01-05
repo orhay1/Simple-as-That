@@ -231,10 +231,13 @@ export function PromptsTab() {
                 <SelectItem value="google/gemini-2.5-flash-image-preview">
                   Gemini 2.5 Flash Image (Faster)
                 </SelectItem>
+                <SelectItem value="openai/gpt-image-1">
+                  OpenAI DALL-E 3 (Requires API Key)
+                </SelectItem>
               </SelectContent>
             </Select>
             <p className="text-xs text-muted-foreground">
-              Gemini 3 Pro produces higher quality images but may be slower. Gemini 2.5 Flash is faster but with slightly lower quality.
+              Gemini models use Lovable AI. OpenAI DALL-E 3 requires a separate API key configured in secrets.
             </p>
           </div>
         </CardContent>
