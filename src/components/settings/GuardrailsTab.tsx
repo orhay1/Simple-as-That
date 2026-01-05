@@ -66,7 +66,7 @@ function TagInput({ tags, onTagsChange, placeholder, disabled }: TagInputProps) 
 
 export function GuardrailsTab() {
   const { guardrails, isLoading, updateGuardrails, suggestGuardrails } = useGuardrails();
-  const { isManager } = useAuth();
+  const { isAdmin } = useAuth();
   
   const [bannedPhrases, setBannedPhrases] = useState<string[]>([]);
   const [disclaimers, setDisclaimers] = useState<string[]>([]);
@@ -126,7 +126,7 @@ export function GuardrailsTab() {
     );
   }
 
-  const disabled = !isManager;
+  const disabled = !isAdmin;
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -136,7 +136,7 @@ export function GuardrailsTab() {
           <CardTitle>Content Rules</CardTitle>
           <CardDescription>
             Define guardrails for content quality and compliance
-            {!isManager && <span className="ml-1 text-amber-500">(View only - Manager access required)</span>}
+            {!isAdmin && <span className="ml-1 text-amber-500">(View only - Admin access required)</span>}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -212,7 +212,7 @@ export function GuardrailsTab() {
       </Card>
 
       {/* AI Suggestions */}
-      {isManager && (
+      {isAdmin && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">

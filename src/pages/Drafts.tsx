@@ -11,7 +11,7 @@ import { useDrafts } from '@/hooks/useDrafts';
 import { useAIGeneration } from '@/hooks/useAIGeneration';
 import { useLinkedIn } from '@/hooks/useLinkedIn';
 import { DraftEditorSheet } from '@/components/drafts/DraftEditorSheet';
-import { Plus, Edit, Trash2, Eye, CheckCircle, Send, Loader2, ChevronDown, Link, Linkedin } from 'lucide-react';
+import { Plus, Edit, Trash2, CheckCircle, Send, Loader2, ChevronDown, Link, Linkedin } from 'lucide-react';
 import { PostStatus, PostDraftWithAsset } from '@/types/database';
 import { toast } from 'sonner';
 
@@ -63,7 +63,6 @@ export default function Drafts() {
               { id: editDraft.id, body: data.rewritten },
               {
                 onSuccess: () => {
-                  // Update local state so the editor reflects the change
                   setEditDraft(prev => prev ? { ...prev, body: data.rewritten } : null);
                 }
               }
@@ -90,7 +89,6 @@ export default function Drafts() {
               },
               {
                 onSuccess: () => {
-                  // Update local state so hashtags show immediately
                   setEditDraft(prev => prev ? {
                     ...prev,
                     hashtags_broad: data.hashtags.hashtags_broad,
@@ -117,7 +115,6 @@ export default function Drafts() {
               { id: editDraft.id, image_description: data.image_description },
               {
                 onSuccess: () => {
-                  // Update local state so the description shows immediately
                   setEditDraft(prev => prev ? { ...prev, image_description: data.image_description } : null);
                 }
               }
@@ -138,7 +135,6 @@ export default function Drafts() {
       { prompt: editDraft.image_description, draft_id: editDraft.id },
       {
         onSuccess: (data) => {
-          // Update local state so the image shows immediately
           setEditDraft(prev => prev ? {
             ...prev,
             image_asset_id: data.asset_id,
@@ -159,7 +155,6 @@ export default function Drafts() {
       { id: editDraft.id, image_asset_id: assetId },
       {
         onSuccess: () => {
-          // Refetch to get the joined asset data
           setEditDraft(prev => prev ? { ...prev, image_asset_id: assetId } : null);
           toast.success('Image attached to draft');
         }
@@ -196,9 +191,9 @@ export default function Drafts() {
     toast.success('Draft marked as published');
   };
 
+  // Simplified status colors - removed in_review
   const statusColors: Record<PostStatus, string> = {
     draft: 'bg-muted text-muted-foreground',
-    in_review: 'bg-chart-1/20 text-chart-1',
     approved: 'bg-chart-2/20 text-chart-2',
     scheduled: 'bg-chart-3/20 text-chart-3',
     published: 'bg-chart-4/20 text-chart-4',
@@ -243,7 +238,9 @@ export default function Drafts() {
               <CardHeader className="pb-2">
                 <div className="flex items-start justify-between">
                   <CardTitle className="text-lg">{draft.title}</CardTitle>
-                  <Badge className={statusColors[draft.status]}>{draft.status.replace('_', ' ')}</Badge>
+                  <Badge className={statusColors[draft.status as PostStatus] || statusColors.draft}>
+                    {draft.status.replace('_', ' ')}
+                  </Badge>
                 </div>
               </CardHeader>
               <CardContent>
@@ -262,12 +259,8 @@ export default function Drafts() {
                     <Edit className="mr-1 h-3 w-3" /> Edit
                   </Button>
 
+                  {/* Simplified workflow: Draft -> Approve -> Publish */}
                   {draft.status === 'draft' && (
-                    <Button size="sm" variant="outline" onClick={() => updateDraftStatus.mutate({ id: draft.id, status: 'in_review' })}>
-                      <Eye className="mr-1 h-3 w-3" /> Submit Review
-                    </Button>
-                  )}
-                  {draft.status === 'in_review' && (
                     <Button size="sm" variant="outline" onClick={() => updateDraftStatus.mutate({ id: draft.id, status: 'approved' })}>
                       <CheckCircle className="mr-1 h-3 w-3" /> Approve
                     </Button>

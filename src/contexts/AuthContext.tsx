@@ -11,9 +11,7 @@ interface AuthContextType {
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
   signUp: (email: string, password: string, displayName?: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
-  isManager: boolean;
-  isEditor: boolean;
-  isViewer: boolean;
+  isAdmin: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -62,13 +60,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (error) {
         console.error('Error fetching user role:', error);
-        setUserRole('viewer');
+        // Default to 'user' role if not found
+        setUserRole('user');
       } else {
-        setUserRole(data?.role as AppRole || 'viewer');
+        // Map old roles to new simplified roles
+        const role = data?.role as string;
+        if (role === 'manager' || role === 'admin') {
+          setUserRole('admin');
+        } else {
+          setUserRole('user');
+        }
       }
     } catch (error) {
       console.error('Error fetching user role:', error);
-      setUserRole('viewer');
+      setUserRole('user');
     } finally {
       setLoading(false);
     }
@@ -104,9 +109,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     signIn,
     signUp,
     signOut,
-    isManager: userRole === 'manager',
-    isEditor: userRole === 'editor' || userRole === 'manager',
-    isViewer: userRole === 'viewer' || userRole === 'editor' || userRole === 'manager',
+    isAdmin: userRole === 'admin',
   };
 
   return (

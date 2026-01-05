@@ -6,47 +6,48 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// Default prompts - can be overridden via settings
-const DEFAULT_PERPLEXITY_SYSTEM_PROMPT = `You are an expert AI industry analyst and researcher specializing in artificial intelligence tools, platforms, and industry developments. Your task is to find and analyze the most significant, recent AI news that would resonate with a professional LinkedIn audience.
+// Improved default prompts focused on practical AI tools
+const DEFAULT_PERPLEXITY_SYSTEM_PROMPT = `You are an expert AI tools researcher and analyst. Your task is to find and analyze practical AI tools that developers and professionals can use.
 
 RESEARCH FOCUS:
-- New AI tool launches and major feature updates
-- Funding rounds and acquisitions in the AI space
-- Breakthrough research papers with practical applications
-- Enterprise AI adoption stories and case studies
-- Open source AI releases and community developments
-- AI policy and regulatory developments with business impact
+- New AI tools launched on GitHub, Product Hunt, or dedicated AI tool directories
+- Practical tools from Taaft, There's An AI For That, and similar directories
+- Open source AI projects gaining traction
+- AI-powered developer tools and productivity apps
 
 OUTPUT REQUIREMENTS:
-For each news item, provide:
-1. title: A clear, compelling headline (max 100 chars) that captures the essence
-2. summary: A 2-3 sentence summary explaining:
-   - What happened/was announced
-   - Why it matters for professionals
-   - Key implications or opportunities
-3. source_url: The primary, authoritative source URL (prefer official announcements, reputable tech publications)
-4. tool_name: The specific AI tool, company, or platform involved (if applicable)
-5. tags: An array of 3-5 relevant tags from categories like:
-   - Technology type: ["llm", "image-generation", "video-ai", "voice-ai", "agents", "rag", "fine-tuning"]
-   - Use case: ["productivity", "coding", "creative", "enterprise", "research", "automation"]
-   - Category: ["launch", "update", "funding", "open-source", "research", "regulation"]
+For each tool, provide a structured analysis:
+1. title: Clear tool name and one-line description (max 80 chars)
+2. summary: A structured summary including:
+   - What it does (2-3 sentences)
+   - How to use it (key features/workflow)
+   - Main benefits and use cases
+   - Any notable limitations or requirements
+3. source_url: The official website, GitHub repo, or authoritative source
+4. tool_name: The specific tool/project name
+5. tags: Array of 3-5 tags like ["open-source", "llm", "coding", "productivity", "free", "api"]
 
 QUALITY CRITERIA:
-- Prioritize news from the last 7 days
-- Focus on actionable insights, not just announcements
-- Avoid rumors or unverified claims
-- Prefer items with clear business or practical relevance
-- Include a mix of big tech and innovative startups
+- Prioritize tools launched or updated in the last 14 days
+- Focus on tools with clear practical value
+- Include GitHub stars/forks for open-source projects when available
+- Note pricing (free, freemium, paid) when relevant
+- Prefer tools with good documentation
 
-Return a JSON array of 5-7 high-quality news items. No markdown formatting, just the raw JSON array.`;
+Return a JSON array of 5-7 tools. No markdown, just the JSON array.`;
 
-const DEFAULT_PERPLEXITY_USER_PROMPT = `Find the latest and most significant AI tools, launches, and updates from this week. Focus on:
-1. Major product launches or significant feature updates from AI companies
-2. Notable funding rounds or acquisitions
-3. Open source releases that developers should know about
-4. Interesting use cases or adoption stories
+const DEFAULT_PERPLEXITY_USER_PROMPT = `Find the latest practical AI tools from:
+1. GitHub trending AI repositories
+2. Taaft and "There's An AI For That" recent additions
+3. Product Hunt AI launches
+4. Notable open-source AI projects
 
-Prioritize items that would make engaging LinkedIn content for a tech-savvy professional audience.`;
+Focus on tools that are:
+- Ready to use (not just research papers)
+- Well-documented
+- Solve real problems for developers, creators, or professionals
+
+Provide structured information for creating engaging LinkedIn posts about each tool.`;
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -79,17 +80,18 @@ serve(async (req) => {
       );
     }
 
-    // Verify user has manager role (research uses API credits)
+    // Check user role - allow both 'manager' (old) and 'admin' (new) roles
     const { data: roleData } = await supabase
       .from('user_roles')
       .select('role')
       .eq('user_id', user.id)
       .single();
 
-    if (!roleData || roleData.role !== 'manager') {
+    const userRole = roleData?.role;
+    if (!userRole || (userRole !== 'manager' && userRole !== 'admin')) {
       console.error('Insufficient permissions for user:', user.id);
       return new Response(
-        JSON.stringify({ success: false, error: 'Manager role required for research' }),
+        JSON.stringify({ success: false, error: 'Admin role required for research' }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -128,7 +130,7 @@ serve(async (req) => {
     const systemPrompt = settingsMap['perplexity_system_prompt'] || DEFAULT_PERPLEXITY_SYSTEM_PROMPT;
     const userPrompt = query || settingsMap['perplexity_user_prompt'] || DEFAULT_PERPLEXITY_USER_PROMPT;
 
-    console.log('Starting AI news research with prompts:', {
+    console.log('Starting AI tools research with prompts:', {
       systemPromptLength: systemPrompt.length,
       userPromptLength: userPrompt.length,
       usingCustomSystem: !!settingsMap['perplexity_system_prompt'],
@@ -185,17 +187,17 @@ serve(async (req) => {
       console.log('Raw content:', content);
       // Create a single item from the text response
       newsItems = [{
-        title: 'AI News Summary',
+        title: 'AI Tools Summary',
         summary: content.substring(0, 500),
         source_url: citations[0] || null,
         tool_name: null,
-        tags: ['ai', 'news']
+        tags: ['ai', 'tools']
       }];
     }
 
-    console.log(`Parsed ${newsItems.length} news items from Perplexity`);
+    console.log(`Parsed ${newsItems.length} tools from Perplexity`);
 
-    // Step 2: Scrape full content with Firecrawl for each item
+    // Step 2: Optionally enrich with Firecrawl for additional context
     const enrichedItems = [];
     
     for (const item of newsItems) {
@@ -206,9 +208,10 @@ serve(async (req) => {
         raw_firecrawl_response: null,
       };
 
+      // Only scrape if we have Firecrawl key and a source URL
       if (item.source_url && firecrawlKey) {
         try {
-          console.log(`Scraping URL with Firecrawl: ${item.source_url}`);
+          console.log(`Fetching additional info from: ${item.source_url}`);
           const firecrawlResponse = await fetch('https://api.firecrawl.dev/v1/scrape', {
             method: 'POST',
             headers: {
@@ -224,14 +227,20 @@ serve(async (req) => {
 
           if (firecrawlResponse.ok) {
             const firecrawlData = await firecrawlResponse.json();
-            enrichedItem.full_content = firecrawlData.data?.markdown || firecrawlData.markdown || null;
+            const rawContent = firecrawlData.data?.markdown || firecrawlData.markdown || null;
+            
+            // Clean and limit the content
+            if (rawContent) {
+              // Take first 2000 chars to avoid overly long content
+              enrichedItem.full_content = rawContent.substring(0, 2000);
+            }
             enrichedItem.raw_firecrawl_response = firecrawlData;
-            console.log(`Successfully scraped content for: ${item.title}`);
+            console.log(`Successfully fetched content for: ${item.title}`);
           } else {
             console.warn(`Firecrawl failed for ${item.source_url}: ${firecrawlResponse.status}`);
           }
         } catch (scrapeError) {
-          console.warn(`Error scraping ${item.source_url}:`, scrapeError);
+          console.warn(`Error fetching ${item.source_url}:`, scrapeError);
         }
       }
 
@@ -239,9 +248,9 @@ serve(async (req) => {
     }
 
     // Step 3: Store in database
-    console.log('Storing news items in database...');
+    console.log('Storing tools in database...');
     const insertData = enrichedItems.map(item => ({
-      title: item.title || 'Untitled',
+      title: item.title || 'Untitled Tool',
       summary: item.summary || null,
       full_content: item.full_content || null,
       source_url: item.source_url || null,
@@ -261,19 +270,19 @@ serve(async (req) => {
     if (insertError) {
       console.error('Database insert error:', insertError);
       return new Response(
-        JSON.stringify({ success: false, error: 'Failed to save news items' }),
+        JSON.stringify({ success: false, error: 'Failed to save tools' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    console.log(`Successfully saved ${savedItems?.length || 0} news items`);
+    console.log(`Successfully saved ${savedItems?.length || 0} AI tools`);
 
     return new Response(
       JSON.stringify({ 
         success: true, 
         items: savedItems,
         citations,
-        message: `Discovered ${savedItems?.length || 0} AI news items`
+        message: `Discovered ${savedItems?.length || 0} AI tools`
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );

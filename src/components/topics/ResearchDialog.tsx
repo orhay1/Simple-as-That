@@ -28,10 +28,11 @@ export function ResearchDialog({ open, onOpenChange, onResearch, isResearching }
   };
 
   const presetQueries = [
-    'Latest AI coding assistants and developer tools',
-    'New generative AI image and video tools',
-    'AI productivity and automation tools launched this week',
-    'Breakthrough AI research and model releases',
+    'GitHub trending AI tools and repos',
+    'New AI tools on Taaft this week',
+    'Open source AI projects for developers',
+    'AI productivity and automation tools',
+    'AI coding assistants and dev tools',
   ];
 
   return (
@@ -40,11 +41,11 @@ export function ResearchDialog({ open, onOpenChange, onResearch, isResearching }
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Search className="h-5 w-5" />
-            Research AI News
+            Research AI Tools
           </DialogTitle>
           <DialogDescription>
-            Search for the latest AI tools and news to inspire your LinkedIn content.
-            Uses Perplexity for discovery and Firecrawl for full content extraction.
+            Search for the latest practical AI tools from GitHub, Taaft, and other sources.
+            Results will be summarized for easy LinkedIn post creation.
           </DialogDescription>
         </DialogHeader>
 
@@ -53,7 +54,7 @@ export function ResearchDialog({ open, onOpenChange, onResearch, isResearching }
             <Label htmlFor="query">Search Query (optional)</Label>
             <Input
               id="query"
-              placeholder="e.g., Latest AI coding tools..."
+              placeholder="e.g., AI tools for video editing..."
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               disabled={isResearching}
@@ -73,7 +74,7 @@ export function ResearchDialog({ open, onOpenChange, onResearch, isResearching }
                   onClick={() => setQuery(preset)}
                   disabled={isResearching}
                 >
-                  {preset.length > 35 ? preset.substring(0, 35) + '...' : preset}
+                  {preset}
                 </Button>
               ))}
             </div>

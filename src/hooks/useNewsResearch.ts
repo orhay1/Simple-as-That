@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { useState } from 'react';
 
 export interface NewsItem {
   id: string;
@@ -19,6 +20,7 @@ export interface NewsItem {
 
 export function useNewsResearch() {
   const queryClient = useQueryClient();
+  const [researchStatus, setResearchStatus] = useState<string | null>(null);
 
   // Fetch all news items
   const { data: newsItems = [], isLoading, error } = useQuery({
@@ -37,6 +39,8 @@ export function useNewsResearch() {
   // Research new AI news
   const researchNews = useMutation({
     mutationFn: async (query?: string) => {
+      setResearchStatus('Connecting...');
+      
       const { data, error } = await supabase.functions.invoke('research-ai-news', {
         body: { query },
       });
@@ -45,11 +49,16 @@ export function useNewsResearch() {
       if (!data.success) throw new Error(data.error || 'Research failed');
       return data;
     },
+    onMutate: () => {
+      setResearchStatus('Searching tools...');
+    },
     onSuccess: (data) => {
+      setResearchStatus(null);
       queryClient.invalidateQueries({ queryKey: ['news-items'] });
       toast.success(data.message || 'Research complete');
     },
     onError: (error: any) => {
+      setResearchStatus(null);
       toast.error('Research failed: ' + (error.message || 'Unknown error'));
     },
   });
@@ -99,5 +108,6 @@ export function useNewsResearch() {
     updateStatus,
     deleteNewsItem,
     isResearching: researchNews.isPending,
+    researchStatus,
   };
 }

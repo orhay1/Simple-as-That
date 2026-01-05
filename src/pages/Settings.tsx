@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -7,15 +7,17 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useLinkedIn } from '@/hooks/useLinkedIn';
 import { PromptsTab } from '@/components/settings/PromptsTab';
+import { VoiceStyleTab } from '@/components/settings/VoiceStyleTab';
+import { ImageSettingsTab } from '@/components/settings/ImageSettingsTab';
 import { GuardrailsTab } from '@/components/settings/GuardrailsTab';
-import { ResearchTab } from '@/components/settings/ResearchTab';
-import { Linkedin, FileText, Shield, CheckCircle, AlertCircle, Loader2, LogOut, Search } from 'lucide-react';
+import { Linkedin, FileText, Shield, CheckCircle, AlertCircle, Loader2, LogOut, Mic, Image } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 
 export default function Settings() {
   const { connection, isLoading, isConnected, isExpired, connectLinkedIn, disconnectLinkedIn } = useLinkedIn();
   const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
 
   useEffect(() => {
     const linkedinStatus = searchParams.get('linkedin');
@@ -29,6 +31,13 @@ export default function Settings() {
     }
   }, [searchParams, setSearchParams]);
 
+  // Get the tab from URL or default to linkedin
+  const tabFromUrl = searchParams.get('tab') || 'linkedin';
+
+  const handleTabChange = (value: string) => {
+    setSearchParams({ tab: value });
+  };
+
   return (
     <AppLayout>
       <div className="space-y-6 animate-fade-in">
@@ -37,8 +46,8 @@ export default function Settings() {
           <p className="text-muted-foreground">Configure your content studio</p>
         </div>
         
-        <Tabs defaultValue="linkedin" className="space-y-4">
-          <TabsList className="grid w-full grid-cols-4 lg:w-auto lg:inline-grid">
+        <Tabs value={tabFromUrl} onValueChange={handleTabChange} className="space-y-4">
+          <TabsList className="grid w-full grid-cols-5 lg:w-auto lg:inline-grid">
             <TabsTrigger value="linkedin" className="gap-2">
               <Linkedin className="h-4 w-4" />
               <span className="hidden sm:inline">LinkedIn</span>
@@ -47,9 +56,13 @@ export default function Settings() {
               <FileText className="h-4 w-4" />
               <span className="hidden sm:inline">Prompts</span>
             </TabsTrigger>
-            <TabsTrigger value="research" className="gap-2">
-              <Search className="h-4 w-4" />
-              <span className="hidden sm:inline">Research</span>
+            <TabsTrigger value="voice" className="gap-2">
+              <Mic className="h-4 w-4" />
+              <span className="hidden sm:inline">Voice</span>
+            </TabsTrigger>
+            <TabsTrigger value="images" className="gap-2">
+              <Image className="h-4 w-4" />
+              <span className="hidden sm:inline">Images</span>
             </TabsTrigger>
             <TabsTrigger value="guardrails" className="gap-2">
               <Shield className="h-4 w-4" />
@@ -143,8 +156,12 @@ export default function Settings() {
             <PromptsTab />
           </TabsContent>
 
-          <TabsContent value="research">
-            <ResearchTab />
+          <TabsContent value="voice">
+            <VoiceStyleTab />
+          </TabsContent>
+
+          <TabsContent value="images">
+            <ImageSettingsTab />
           </TabsContent>
           
           <TabsContent value="guardrails">
