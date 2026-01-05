@@ -7,47 +7,44 @@ const corsHeaders = {
 };
 
 // Improved default prompts focused on practical AI tools
-const DEFAULT_PERPLEXITY_SYSTEM_PROMPT = `You are an expert AI tools researcher and analyst. Your task is to find and analyze practical AI tools that developers and professionals can use.
+const DEFAULT_PERPLEXITY_SYSTEM_PROMPT = `You are an expert AI tools researcher. Find practical AI tools that developers and professionals can use immediately.
 
-RESEARCH FOCUS:
-- New AI tools launched on GitHub, Product Hunt, or dedicated AI tool directories
-- Practical tools from Taaft, There's An AI For That, and similar directories
-- Open source AI projects gaining traction
-- AI-powered developer tools and productivity apps
+OUTPUT FORMAT - Return a JSON array. Each tool must have:
+- title: Tool name + one-line hook (max 60 chars)
+- summary: Brief 2-sentence description of what it does
+- source_url: Official website or GitHub URL
+- tool_name: The exact tool/project name
+- tags: 3-5 tags like ["open-source", "llm", "coding", "free"]
 
-OUTPUT REQUIREMENTS:
-For each tool, provide a structured analysis:
-1. title: Clear tool name and one-line description (max 80 chars)
-2. summary: A structured summary including:
-   - What it does (2-3 sentences)
-   - How to use it (key features/workflow)
-   - Main benefits and use cases
-   - Any notable limitations or requirements
-3. source_url: The official website, GitHub repo, or authoritative source
-4. tool_name: The specific tool/project name
-5. tags: Array of 3-5 tags like ["open-source", "llm", "coding", "productivity", "free", "api"]
+FOCUS ON:
+- GitHub trending AI repos (include star count)
+- Taaft and "There's An AI For That" recent additions
+- Tools launched in the last 14 days
+- Free or freemium tools with clear practical value
 
-QUALITY CRITERIA:
-- Prioritize tools launched or updated in the last 14 days
-- Focus on tools with clear practical value
-- Include GitHub stars/forks for open-source projects when available
-- Note pricing (free, freemium, paid) when relevant
-- Prefer tools with good documentation
+Return ONLY a valid JSON array, no markdown formatting.`;
 
-Return a JSON array of 5-7 tools. No markdown, just the JSON array.`;
+const DEFAULT_PERPLEXITY_USER_PROMPT = `Find the latest practical AI tools. Focus on ready-to-use tools with good documentation.`;
 
-const DEFAULT_PERPLEXITY_USER_PROMPT = `Find the latest practical AI tools from:
-1. GitHub trending AI repositories
-2. Taaft and "There's An AI For That" recent additions
-3. Product Hunt AI launches
-4. Notable open-source AI projects
+const DEFAULT_POLISH_PROMPT = `Transform this AI tool data into a polished LinkedIn post summary.
 
-Focus on tools that are:
-- Ready to use (not just research papers)
-- Well-documented
-- Solve real problems for developers, creators, or professionals
+TOOL: {tool_name}
+DATA: {summary}
+{context}
 
-Provide structured information for creating engaging LinkedIn posts about each tool.`;
+Write 2-3 SHORT paragraphs (150-200 words total):
+- Opening: One punchy sentence about the problem it solves
+- Middle: What it does and one key benefit (use specific numbers if available)
+- End: Who should try it (be specific)
+
+STYLE RULES:
+- Write like you're texting a smart colleague, not writing a blog
+- No buzzwords: avoid "revolutionary", "game-changer", "cutting-edge"
+- No filler phrases: avoid "This tool...", "It provides...", "You can..."
+- Start sentences with actions or results, not subjects
+- Include GitHub stars or user count if available
+
+Return ONLY the summary text. No headers, no formatting, no quotes.`;
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -96,7 +93,7 @@ serve(async (req) => {
       );
     }
 
-    const { query } = await req.json();
+    const { query, count = 5 } = await req.json();
     
     const perplexityKey = Deno.env.get('PERPLEXITY_API_KEY');
     const firecrawlKey = Deno.env.get('FIRECRAWL_API_KEY');
@@ -116,7 +113,7 @@ serve(async (req) => {
     const { data: settings } = await supabase
       .from('settings')
       .select('key, value')
-      .in('key', ['perplexity_system_prompt', 'perplexity_user_prompt']);
+      .in('key', ['perplexity_system_prompt', 'perplexity_user_prompt', 'research_polish_prompt']);
 
     const settingsMap: Record<string, string> = {};
     settings?.forEach(s => {
@@ -127,8 +124,11 @@ serve(async (req) => {
       }
     });
 
-    const systemPrompt = settingsMap['perplexity_system_prompt'] || DEFAULT_PERPLEXITY_SYSTEM_PROMPT;
+    // Build system prompt with count
+    const baseSystemPrompt = settingsMap['perplexity_system_prompt'] || DEFAULT_PERPLEXITY_SYSTEM_PROMPT;
+    const systemPrompt = baseSystemPrompt.replace(/\d+-\d+ tools|\d+ tools/g, `${count} tools`) + `\n\nReturn exactly ${count} tools.`;
     const userPrompt = query || settingsMap['perplexity_user_prompt'] || DEFAULT_PERPLEXITY_USER_PROMPT;
+    const polishPrompt = settingsMap['research_polish_prompt'] || DEFAULT_POLISH_PROMPT;
 
     console.log('Starting AI tools research with prompts:', {
       systemPromptLength: systemPrompt.length,
@@ -250,52 +250,37 @@ serve(async (req) => {
         try {
           console.log(`Polishing summary for: ${item.title}`);
           
-          const polishPrompt = `You are a professional LinkedIn content writer. Transform the following AI tool research into a compelling, human-readable summary.
+          // Use the customizable polish prompt
+          const contextLine = enrichedItem.full_content ? `CONTEXT: ${enrichedItem.full_content.substring(0, 800)}` : '';
+          const filledPolishPrompt = polishPrompt
+            .replace('{tool_name}', item.tool_name || item.title)
+            .replace('{summary}', typeof item.summary === 'object' ? JSON.stringify(item.summary) : item.summary)
+            .replace('{context}', contextLine);
 
-TOOL DATA:
-- Name: ${item.tool_name || item.title}
-- Raw Summary: ${typeof item.summary === 'object' ? JSON.stringify(item.summary) : item.summary}
-${enrichedItem.full_content ? `- Additional Context: ${enrichedItem.full_content.substring(0, 1000)}` : ''}
-
-Write a 3-4 paragraph summary that:
-1. Opens with an engaging hook about what problem this tool solves
-2. Explains how it works in accessible language (avoid technical jargon unless necessary)
-3. Highlights 2-3 key benefits with real-world examples
-4. Ends with who should consider using this tool
-
-Style guidelines:
-- Professional but conversational, like explaining to a colleague over coffee
-- Use active voice and storytelling
-- Avoid generic phrases like "This tool is..." or "It provides..."
-- Include any notable stats (GitHub stars, user count) if available
-- Keep it concise but engaging
-
-Return ONLY the polished summary text, no JSON, no formatting, no headers.`;
-
-          const polishResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+          const aiPolishResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
             method: 'POST',
             headers: {
               'Authorization': `Bearer ${lovableApiKey}`,
               'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-              model: 'google/gemini-2.5-flash',
+              model: 'google/gemini-2.5-flash-lite',
               messages: [
-                { role: 'user', content: polishPrompt }
+                { role: 'user', content: filledPolishPrompt }
               ],
             }),
           });
 
-          if (polishResponse.ok) {
-            const polishData = await polishResponse.json();
+          if (aiPolishResponse.ok) {
+            const polishData = await aiPolishResponse.json();
             const polishedText = polishData.choices?.[0]?.message?.content;
             if (polishedText) {
               enrichedItem.polished_summary = polishedText.trim();
               console.log(`Successfully polished summary for: ${item.title}`);
             }
           } else {
-            const errorText = await polishResponse.text();
-            console.warn(`AI polish failed for ${item.title}: ${polishResponse.status}`, errorText);
+            const errorText = await aiPolishResponse.text();
+            console.warn(`AI polish failed for ${item.title}: ${aiPolishResponse.status}`, errorText);
           }
         } catch (polishError) {
           console.warn(`Error polishing ${item.title}:`, polishError);

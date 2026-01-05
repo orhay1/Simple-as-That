@@ -72,47 +72,44 @@ function PromptItem({ title, description, value, defaultValue, onChange, onSave,
 }
 
 // Default prompts
-export const DEFAULT_PERPLEXITY_SYSTEM_PROMPT = `You are an expert AI tools researcher and analyst. Your task is to find and analyze practical AI tools that developers and professionals can use.
+export const DEFAULT_PERPLEXITY_SYSTEM_PROMPT = `You are an expert AI tools researcher. Find practical AI tools that developers and professionals can use immediately.
 
-RESEARCH FOCUS:
-- New AI tools launched on GitHub, Product Hunt, or dedicated AI tool directories
-- Practical tools from Taaft, There's An AI For That, and similar directories
-- Open source AI projects gaining traction
-- AI-powered developer tools and productivity apps
+OUTPUT FORMAT - Return a JSON array. Each tool must have:
+- title: Tool name + one-line hook (max 60 chars)
+- summary: Brief 2-sentence description of what it does
+- source_url: Official website or GitHub URL
+- tool_name: The exact tool/project name
+- tags: 3-5 tags like ["open-source", "llm", "coding", "free"]
 
-OUTPUT REQUIREMENTS:
-For each tool, provide a structured analysis:
-1. title: Clear tool name and one-line description (max 80 chars)
-2. summary: A structured summary including:
-   - What it does (2-3 sentences)
-   - How to use it (key features/workflow)
-   - Main benefits and use cases
-   - Any notable limitations or requirements
-3. source_url: The official website, GitHub repo, or authoritative source
-4. tool_name: The specific tool/project name
-5. tags: Array of 3-5 tags like ["open-source", "llm", "coding", "productivity", "free", "api"]
+FOCUS ON:
+- GitHub trending AI repos (include star count)
+- Taaft and "There's An AI For That" recent additions
+- Tools launched in the last 14 days
+- Free or freemium tools with clear practical value
 
-QUALITY CRITERIA:
-- Prioritize tools launched or updated in the last 14 days
-- Focus on tools with clear practical value
-- Include GitHub stars/forks for open-source projects when available
-- Note pricing (free, freemium, paid) when relevant
-- Prefer tools with good documentation
+Return ONLY a valid JSON array, no markdown formatting.`;
 
-Return a JSON array of 5-7 tools. No markdown, just the JSON array.`;
+export const DEFAULT_PERPLEXITY_USER_PROMPT = `Find the latest practical AI tools. Focus on ready-to-use tools with good documentation.`;
 
-export const DEFAULT_PERPLEXITY_USER_PROMPT = `Find the latest practical AI tools from:
-1. GitHub trending AI repositories
-2. Taaft and "There's An AI For That" recent additions
-3. Product Hunt AI launches
-4. Notable open-source AI projects
+export const DEFAULT_POLISH_PROMPT = `Transform this AI tool data into a polished LinkedIn post summary.
 
-Focus on tools that are:
-- Ready to use (not just research papers)
-- Well-documented
-- Solve real problems for developers, creators, or professionals
+TOOL: {tool_name}
+DATA: {summary}
+{context}
 
-Provide structured information for creating engaging LinkedIn posts about each tool.`;
+Write 2-3 SHORT paragraphs (150-200 words total):
+- Opening: One punchy sentence about the problem it solves
+- Middle: What it does and one key benefit (use specific numbers if available)
+- End: Who should try it (be specific)
+
+STYLE RULES:
+- Write like you're texting a smart colleague, not writing a blog
+- No buzzwords: avoid "revolutionary", "game-changer", "cutting-edge"
+- No filler phrases: avoid "This tool...", "It provides...", "You can..."
+- Start sentences with actions or results, not subjects
+- Include GitHub stars or user count if available
+
+Return ONLY the summary text. No headers, no formatting, no quotes.`;
 
 const PROMPTS_CONFIG = [
   { 
@@ -126,6 +123,12 @@ const PROMPTS_CONFIG = [
     title: 'AI Research Query', 
     description: 'Default search query for discovering tools',
     defaultValue: DEFAULT_PERPLEXITY_USER_PROMPT
+  },
+  { 
+    key: 'research_polish_prompt', 
+    title: 'Summary Polish Prompt', 
+    description: 'Transforms raw research into LinkedIn-ready summaries',
+    defaultValue: DEFAULT_POLISH_PROMPT
   },
   { 
     key: 'hashtag_generator_prompt', 

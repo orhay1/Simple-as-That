@@ -21,8 +21,8 @@ export default function Topics() {
   const [selectedItem, setSelectedItem] = useState<NewsItem | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
-  const handleResearch = (query?: string) => {
-    researchNews.mutate(query);
+  const handleResearch = (query?: string, count?: number) => {
+    researchNews.mutate({ query, count });
     setResearchDialogOpen(false);
   };
 
