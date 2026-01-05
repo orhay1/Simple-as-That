@@ -11,20 +11,22 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Slider } from '@/components/ui/slider';
 
 interface ResearchDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onResearch: (query?: string) => void;
+  onResearch: (query?: string, count?: number) => void;
   isResearching: boolean;
 }
 
 export function ResearchDialog({ open, onOpenChange, onResearch, isResearching }: ResearchDialogProps) {
   const [query, setQuery] = useState('');
+  const [resultCount, setResultCount] = useState(5);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onResearch(query || undefined);
+    onResearch(query || undefined, resultCount);
   };
 
   const presetQueries = [
@@ -77,6 +79,26 @@ export function ResearchDialog({ open, onOpenChange, onResearch, isResearching }
                   {preset}
                 </Button>
               ))}
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <Label>Number of results</Label>
+              <span className="text-sm font-medium text-muted-foreground">{resultCount}</span>
+            </div>
+            <Slider
+              value={[resultCount]}
+              onValueChange={(values) => setResultCount(values[0])}
+              min={1}
+              max={10}
+              step={1}
+              disabled={isResearching}
+              className="w-full"
+            />
+            <div className="flex justify-between text-xs text-muted-foreground">
+              <span>1</span>
+              <span>10</span>
             </div>
           </div>
 
