@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
@@ -11,7 +12,7 @@ import { LinkedInPostPreview } from './LinkedInPostPreview';
 import { AssetPickerDialog } from './AssetPickerDialog';
 import { PostDraftWithAsset } from '@/types/database';
 import { Asset } from '@/types/database';
-import { Wand2, Hash, Image, RotateCcw, ChevronDown, Loader2, Save, FolderOpen } from 'lucide-react';
+import { Wand2, Hash, Image, RotateCcw, ChevronDown, Loader2, Save, FolderOpen, Settings } from 'lucide-react';
 
 interface DraftEditorSheetProps {
   draft: PostDraftWithAsset | null;
@@ -51,6 +52,7 @@ export function DraftEditorSheet({
   const [imageDescription, setImageDescription] = useState('');
   const [showAssetPicker, setShowAssetPicker] = useState(false);
   const isMobile = useIsMobile();
+  const navigate = useNavigate();
 
   const handleAssetSelect = (asset: Asset) => {
     onAttachAsset(asset.id);
@@ -191,6 +193,10 @@ export function DraftEditorSheet({
                     <DropdownMenuSeparator />
                     <DropdownMenuItem onClick={() => setShowAssetPicker(true)}>
                       <FolderOpen className="mr-2 h-4 w-4" /> Choose from Library
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={() => navigate('/settings?tab=images')}>
+                      <Settings className="mr-2 h-4 w-4" /> Choose Model
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>

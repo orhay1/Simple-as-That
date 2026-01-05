@@ -1,8 +1,8 @@
 // Custom types extending Supabase generated types
 
-export type AppRole = 'manager' | 'editor' | 'viewer';
+export type AppRole = 'user' | 'admin';
 export type TopicStatus = 'new' | 'shortlisted' | 'archived';
-export type PostStatus = 'draft' | 'in_review' | 'approved' | 'scheduled' | 'published';
+export type PostStatus = 'draft' | 'approved' | 'scheduled' | 'published';
 export type ToneStyle = 'founder' | 'educational' | 'contrarian' | 'story';
 export type CtaStyle = 'question' | 'soft' | 'none';
 export type JargonLevel = 'low' | 'medium' | 'high';

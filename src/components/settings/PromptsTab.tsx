@@ -3,58 +3,67 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Label } from '@/components/ui/label';
-import { Input } from '@/components/ui/input';
 import { useSettings } from '@/hooks/useSettings';
 import { useAuth } from '@/contexts/AuthContext';
-import { ChevronDown, Save, Loader2 } from 'lucide-react';
+import { ChevronDown, Save, Loader2, RotateCcw } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface PromptItemProps {
   title: string;
-  settingKey: string;
   description: string;
-  placeholders?: string;
   value: string;
+  defaultValue: string;
   onChange: (value: string) => void;
   onSave: () => void;
+  onReset: () => void;
   isSaving: boolean;
   disabled: boolean;
 }
 
-function PromptItem({ title, description, placeholders, value, onChange, onSave, isSaving, disabled }: PromptItemProps) {
+function PromptItem({ title, description, value, defaultValue, onChange, onSave, onReset, isSaving, disabled }: PromptItemProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const isModified = value !== defaultValue && value !== '';
 
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen}>
       <CollapsibleTrigger className="flex w-full items-center justify-between rounded-lg border border-border bg-card p-4 text-left transition-colors hover:bg-accent/50">
-        <div>
-          <h4 className="font-medium text-foreground">{title}</h4>
-          <p className="text-sm text-muted-foreground">{description}</p>
+        <div className="flex items-center gap-2">
+          <div>
+            <h4 className="font-medium text-foreground">{title}</h4>
+            <p className="text-sm text-muted-foreground">{description}</p>
+          </div>
+          {isModified && (
+            <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs text-primary">Modified</span>
+          )}
         </div>
         <ChevronDown className={cn("h-5 w-5 text-muted-foreground transition-transform duration-200", isOpen && "rotate-180")} />
       </CollapsibleTrigger>
       <CollapsibleContent className="animate-accordion-down">
         <div className="mt-2 space-y-3 rounded-lg border border-border bg-card/50 p-4">
           <Textarea
-            value={value}
+            value={value || defaultValue}
             onChange={(e) => onChange(e.target.value)}
             placeholder="Enter prompt..."
-            className="min-h-[150px] resize-y"
+            className="min-h-[200px] resize-y font-mono text-sm"
             disabled={disabled}
           />
-          {placeholders && (
-            <p className="text-xs text-muted-foreground">
-              <span className="font-medium">Available placeholders:</span> {placeholders}
-            </p>
-          )}
           <div className="flex items-center justify-between">
-            <span className="text-xs text-muted-foreground">{value.length} characters</span>
-            <Button onClick={onSave} disabled={disabled || isSaving} size="sm">
-              {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-              Save
-            </Button>
+            <span className="text-xs text-muted-foreground">{(value || defaultValue).length} characters</span>
+            <div className="flex gap-2">
+              <Button 
+                onClick={onReset} 
+                disabled={disabled || !isModified} 
+                size="sm" 
+                variant="outline"
+              >
+                <RotateCcw className="mr-2 h-4 w-4" />
+                Reset
+              </Button>
+              <Button onClick={onSave} disabled={disabled || isSaving} size="sm">
+                {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                Save
+              </Button>
+            </div>
           </div>
         </div>
       </CollapsibleContent>
@@ -62,184 +71,133 @@ function PromptItem({ title, description, placeholders, value, onChange, onSave,
   );
 }
 
-const PROMPT_CONFIGS = [
-  { key: 'topic_generator_prompt', title: 'Topic Generator Prompt', description: 'Generates topic ideas for content', placeholders: '{context}' },
-  { key: 'draft_generator_prompt', title: 'Draft Generator Prompt', description: 'Creates post drafts from topics', placeholders: '{title}, {hook}, {rationale}, {topic_id}' },
-  { key: 'hashtag_generator_prompt', title: 'Hashtag Generator Prompt', description: 'Generates relevant hashtags', placeholders: '{title}, {body}' },
-  { key: 'image_generator_prompt', title: 'Image Generator Prompt', description: 'Creates image descriptions and prompts', placeholders: '{title}, {body}' },
+// Default prompts
+export const DEFAULT_PERPLEXITY_SYSTEM_PROMPT = `You are an expert AI tools researcher and analyst. Your task is to find and analyze practical AI tools that developers and professionals can use.
+
+RESEARCH FOCUS:
+- New AI tools launched on GitHub, Product Hunt, or dedicated AI tool directories
+- Practical tools from Taaft, There's An AI For That, and similar directories
+- Open source AI projects gaining traction
+- AI-powered developer tools and productivity apps
+
+OUTPUT REQUIREMENTS:
+For each tool, provide a structured analysis:
+1. title: Clear tool name and one-line description (max 80 chars)
+2. summary: A structured summary including:
+   - What it does (2-3 sentences)
+   - How to use it (key features/workflow)
+   - Main benefits and use cases
+   - Any notable limitations or requirements
+3. source_url: The official website, GitHub repo, or authoritative source
+4. tool_name: The specific tool/project name
+5. tags: Array of 3-5 tags like ["open-source", "llm", "coding", "productivity", "free", "api"]
+
+QUALITY CRITERIA:
+- Prioritize tools launched or updated in the last 14 days
+- Focus on tools with clear practical value
+- Include GitHub stars/forks for open-source projects when available
+- Note pricing (free, freemium, paid) when relevant
+- Prefer tools with good documentation
+
+Return a JSON array of 5-7 tools. No markdown, just the JSON array.`;
+
+export const DEFAULT_PERPLEXITY_USER_PROMPT = `Find the latest practical AI tools from:
+1. GitHub trending AI repositories
+2. Taaft and "There's An AI For That" recent additions
+3. Product Hunt AI launches
+4. Notable open-source AI projects
+
+Focus on tools that are:
+- Ready to use (not just research papers)
+- Well-documented
+- Solve real problems for developers, creators, or professionals
+
+Provide structured information for creating engaging LinkedIn posts about each tool.`;
+
+const PROMPTS_CONFIG = [
+  { 
+    key: 'perplexity_system_prompt', 
+    title: 'AI Research System Prompt', 
+    description: 'Instructions for finding and analyzing AI tools',
+    defaultValue: DEFAULT_PERPLEXITY_SYSTEM_PROMPT
+  },
+  { 
+    key: 'perplexity_user_prompt', 
+    title: 'AI Research Query', 
+    description: 'Default search query for discovering tools',
+    defaultValue: DEFAULT_PERPLEXITY_USER_PROMPT
+  },
+  { 
+    key: 'hashtag_generator_prompt', 
+    title: 'Hashtag Generator Prompt', 
+    description: 'Generates relevant hashtags for posts',
+    defaultValue: 'Generate strategic LinkedIn hashtags for maximum reach and engagement.'
+  },
+  { 
+    key: 'image_generator_prompt', 
+    title: 'Image Generator Prompt', 
+    description: 'Creates image descriptions for AI generation',
+    defaultValue: 'Create a professional, LinkedIn-appropriate image description.'
+  },
 ];
 
-const VOICE_SETTINGS = {
-  creativity_preset: { label: 'Creativity Preset', options: ['conservative', 'balanced', 'bold'] },
-  default_tone: { label: 'Default Tone', options: ['founder', 'educational', 'contrarian', 'story'] },
-  default_cta_style: { label: 'CTA Style', options: ['question', 'soft', 'none'] },
-  jargon_level: { label: 'Jargon Level', options: ['low', 'medium', 'high'] },
-  emoji_usage: { label: 'Emoji Usage', options: ['none', 'light', 'normal'] },
-};
-
 export function PromptsTab() {
-  const { getSetting, updateSetting, upsertSetting } = useSettings();
-  const { isManager } = useAuth();
+  const { getSetting, upsertSetting } = useSettings();
+  const { isAdmin } = useAuth();
   const [prompts, setPrompts] = useState<Record<string, string>>({});
-  const [voiceSettings, setVoiceSettings] = useState<Record<string, string>>({});
   const [savingKey, setSavingKey] = useState<string | null>(null);
-  const [isVoiceOpen, setIsVoiceOpen] = useState(false);
 
-  const getPromptValue = (key: string) => {
+  const getPromptValue = (key: string, defaultValue: string) => {
     if (prompts[key] !== undefined) return prompts[key];
     const setting = getSetting(key);
     return typeof setting === 'string' ? setting : '';
   };
 
-  const getVoiceSetting = (key: string) => {
-    if (voiceSettings[key] !== undefined) return voiceSettings[key];
-    const setting = getSetting(key);
-    return typeof setting === 'string' ? setting : '';
-  };
-
-  const handleSavePrompt = async (key: string) => {
+  const handleSavePrompt = async (key: string, defaultValue: string) => {
     setSavingKey(key);
     try {
-      await upsertSetting.mutateAsync({ key, value: prompts[key] || getPromptValue(key) });
+      const value = prompts[key] || getPromptValue(key, defaultValue) || defaultValue;
+      await upsertSetting.mutateAsync({ key, value });
     } finally {
       setSavingKey(null);
     }
   };
 
-  const handleSaveVoiceSetting = async (key: string, value: string) => {
-    setVoiceSettings(prev => ({ ...prev, [key]: value }));
-    await upsertSetting.mutateAsync({ key, value });
+  const handleReset = async (key: string, defaultValue: string) => {
+    setPrompts(prev => ({ ...prev, [key]: defaultValue }));
+    setSavingKey(key);
+    try {
+      await upsertSetting.mutateAsync({ key, value: defaultValue });
+    } finally {
+      setSavingKey(null);
+    }
   };
 
   return (
     <div className="space-y-6 animate-fade-in">
-      {/* Content Generation Prompts */}
       <Card>
         <CardHeader>
-          <CardTitle>Content Generation Prompts</CardTitle>
+          <CardTitle>AI Prompts</CardTitle>
           <CardDescription>
-            Customize AI prompts for each stage of content creation
-            {!isManager && <span className="ml-1 text-amber-500">(View only - Manager access required)</span>}
+            Configure prompts for research, content generation, and images
+            {!isAdmin && <span className="ml-1 text-amber-500">(View only - Admin access required)</span>}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
-          {PROMPT_CONFIGS.map((config) => (
+          {PROMPTS_CONFIG.map((config) => (
             <PromptItem
               key={config.key}
-              settingKey={config.key}
               title={config.title}
               description={config.description}
-              placeholders={config.placeholders}
-              value={getPromptValue(config.key)}
+              value={getPromptValue(config.key, config.defaultValue)}
+              defaultValue={config.defaultValue}
               onChange={(value) => setPrompts(prev => ({ ...prev, [config.key]: value }))}
-              onSave={() => handleSavePrompt(config.key)}
+              onSave={() => handleSavePrompt(config.key, config.defaultValue)}
+              onReset={() => handleReset(config.key, config.defaultValue)}
               isSaving={savingKey === config.key}
-              disabled={!isManager}
+              disabled={!isAdmin}
             />
           ))}
-        </CardContent>
-      </Card>
-
-      {/* Voice & Style Settings */}
-      <Card>
-        <CardHeader>
-          <Collapsible open={isVoiceOpen} onOpenChange={setIsVoiceOpen}>
-            <CollapsibleTrigger className="flex w-full items-center justify-between text-left">
-              <div>
-                <CardTitle>Voice & Style Settings</CardTitle>
-                <CardDescription>Configure default tone and style preferences</CardDescription>
-              </div>
-              <ChevronDown className={cn("h-5 w-5 text-muted-foreground transition-transform duration-200", isVoiceOpen && "rotate-180")} />
-            </CollapsibleTrigger>
-            <CollapsibleContent className="animate-accordion-down">
-              <CardContent className="grid gap-4 pt-4 sm:grid-cols-2 lg:grid-cols-3">
-                {Object.entries(VOICE_SETTINGS).map(([key, config]) => (
-                  <div key={key} className="space-y-2">
-                    <Label htmlFor={key}>{config.label}</Label>
-                    <Select
-                      value={getVoiceSetting(key)}
-                      onValueChange={(value) => handleSaveVoiceSetting(key, value)}
-                      disabled={!isManager}
-                    >
-                      <SelectTrigger id={key}>
-                        <SelectValue placeholder={`Select ${config.label.toLowerCase()}`} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {config.options.map((option) => (
-                          <SelectItem key={option} value={option}>
-                            {option.charAt(0).toUpperCase() + option.slice(1)}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                ))}
-                <div className="space-y-2">
-                  <Label htmlFor="max_length_target">Max Length Target</Label>
-                  <Input
-                    id="max_length_target"
-                    type="number"
-                    value={getVoiceSetting('max_length_target') || '1500'}
-                    onChange={(e) => handleSaveVoiceSetting('max_length_target', e.target.value)}
-                    disabled={!isManager}
-                    min={100}
-                    max={5000}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="topics_per_run">Topics Per Run</Label>
-                  <Input
-                    id="topics_per_run"
-                    type="number"
-                    value={getVoiceSetting('topics_per_run') || '5'}
-                    onChange={(e) => handleSaveVoiceSetting('topics_per_run', e.target.value)}
-                    disabled={!isManager}
-                    min={1}
-                    max={20}
-                  />
-                </div>
-              </CardContent>
-            </CollapsibleContent>
-          </Collapsible>
-        </CardHeader>
-      </Card>
-
-      {/* Image Generation Settings */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Image Generation</CardTitle>
-          <CardDescription>
-            Choose the AI model for generating images
-            {!isManager && <span className="ml-1 text-amber-500">(View only - Manager access required)</span>}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-2">
-            <Label htmlFor="image_generation_model">Image Model</Label>
-            <Select
-              value={getVoiceSetting('image_generation_model') || 'google/gemini-3-pro-image-preview'}
-              onValueChange={(value) => handleSaveVoiceSetting('image_generation_model', value)}
-              disabled={!isManager}
-            >
-              <SelectTrigger id="image_generation_model">
-                <SelectValue placeholder="Select image model" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="google/gemini-3-pro-image-preview">
-                  Gemini 3 Pro Image (Higher Quality, Default)
-                </SelectItem>
-                <SelectItem value="google/gemini-2.5-flash-image-preview">
-                  Gemini 2.5 Flash Image (Faster)
-                </SelectItem>
-                <SelectItem value="openai/gpt-image-1">
-                  OpenAI DALL-E 3 (Requires API Key)
-                </SelectItem>
-              </SelectContent>
-            </Select>
-            <p className="text-xs text-muted-foreground">
-              Gemini models use Lovable AI. OpenAI DALL-E 3 requires a separate API key configured in secrets.
-            </p>
-          </div>
         </CardContent>
       </Card>
     </div>

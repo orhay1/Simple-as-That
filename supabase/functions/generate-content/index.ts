@@ -13,7 +13,7 @@ const corsHeaders = {
 
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-type GenerationType = 'topics' | 'draft' | 'hashtags' | 'rewrite' | 'image_description';
+type GenerationType = 'hashtags' | 'rewrite' | 'image_description';
 
 interface GenerateRequest {
   type: GenerationType;
@@ -504,14 +504,15 @@ serve(async (req) => {
       });
     }
 
-    // Verify user has editor or manager role
+    // Verify user has appropriate role (user or admin)
     const { data: roleData } = await supabase
       .from('user_roles')
       .select('role')
       .eq('user_id', user.id)
       .single();
 
-    if (!roleData || !['editor', 'manager'].includes(roleData.role)) {
+    // Allow all authenticated users with a role (backward compat with old roles)
+    if (!roleData || !['user', 'admin', 'editor', 'manager'].includes(roleData.role)) {
       console.error('Insufficient permissions for user:', user.id);
       return new Response(JSON.stringify({ error: 'Insufficient permissions' }), {
         status: 403,
@@ -524,12 +525,6 @@ serve(async (req) => {
 
     let result;
     switch (type) {
-      case 'topics':
-        result = await generateTopics(inputs);
-        break;
-      case 'draft':
-        result = await generateDraft(inputs);
-        break;
       case 'hashtags':
         result = await generateHashtags(inputs);
         break;
