@@ -58,7 +58,7 @@ export default function Settings() {
             </TabsTrigger>
             <TabsTrigger value="voice" className="gap-2">
               <Mic className="h-4 w-4" />
-              <span className="hidden sm:inline">Voice</span>
+              <span className="hidden sm:inline">Tone</span>
             </TabsTrigger>
             <TabsTrigger value="images" className="gap-2">
               <Image className="h-4 w-4" />
