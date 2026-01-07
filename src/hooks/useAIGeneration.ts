@@ -59,9 +59,30 @@ export function useAIGeneration() {
     },
   });
 
+  const fetchSourceImage = useMutation({
+    mutationFn: async ({ source_url, draft_id }: { source_url: string; draft_id: string }) => {
+      const { data, error } = await supabase.functions.invoke('fetch-source-image', {
+        body: { source_url, draft_id },
+      });
+      
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['assets'] });
+      queryClient.invalidateQueries({ queryKey: ['drafts'] });
+      toast.success('Image fetched from source');
+    },
+    onError: (error: any) => {
+      toast.error('Failed to fetch image: ' + (error.message || 'Unknown error'));
+    },
+  });
+
   return {
     generateContent,
     generateImage,
+    fetchSourceImage,
     isGenerating: generateContent.isPending || generateImage.isPending,
+    isFetchingSourceImage: fetchSourceImage.isPending,
   };
 }

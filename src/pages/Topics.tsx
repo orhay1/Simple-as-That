@@ -30,6 +30,7 @@ export default function Topics() {
     createDraft.mutate({
       title: item.title,
       body: item.summary || '',
+      source_url: item.source_url || undefined,
     });
     updateStatus.mutate({ id: item.id, status: 'used' });
     toast.success('Draft created from AI news');
@@ -91,6 +92,7 @@ export default function Topics() {
       createDraft.mutate({
         title: item.title,
         body: item.summary || '',
+        source_url: item.source_url || undefined,
       });
       updateStatus.mutate({ id: item.id, status: 'used' });
     });

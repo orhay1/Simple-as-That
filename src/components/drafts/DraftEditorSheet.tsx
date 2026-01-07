@@ -12,7 +12,7 @@ import { LinkedInPostPreview } from './LinkedInPostPreview';
 import { AssetPickerDialog } from './AssetPickerDialog';
 import { PostDraftWithAsset } from '@/types/database';
 import { Asset } from '@/types/database';
-import { Wand2, Hash, Image, RotateCcw, ChevronDown, Loader2, Save, FolderOpen, Settings } from 'lucide-react';
+import { Wand2, Hash, Image, RotateCcw, ChevronDown, Loader2, Save, FolderOpen, Settings, Globe } from 'lucide-react';
 
 interface DraftEditorSheetProps {
   draft: PostDraftWithAsset | null;
@@ -23,9 +23,11 @@ interface DraftEditorSheetProps {
   onGenerateHashtags: (title: string, body: string) => void;
   onGenerateImageDescription: (title: string, body: string) => void;
   onGenerateImage: (imageDescription: string) => void;
+  onFetchSourceImage?: () => void;
   onAttachAsset: (assetId: string) => void;
   isGenerating: boolean;
   isGeneratingImage?: boolean;
+  isFetchingSourceImage?: boolean;
   profileName?: string;
   profileAvatar?: string;
   profileHeadline?: string;
@@ -40,9 +42,11 @@ export function DraftEditorSheet({
   onGenerateHashtags,
   onGenerateImageDescription,
   onGenerateImage,
+  onFetchSourceImage,
   onAttachAsset,
   isGenerating,
   isGeneratingImage,
+  isFetchingSourceImage,
   profileName,
   profileAvatar,
   profileHeadline,
@@ -178,8 +182,8 @@ export function DraftEditorSheet({
 
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button size="sm" variant="outline" disabled={isGenerating || isGeneratingImage}>
-                      {(isGenerating || isGeneratingImage) ? <Loader2 className="mr-1 h-3 w-3 animate-spin" /> : <Image className="mr-1 h-3 w-3" />}
+                    <Button size="sm" variant="outline" disabled={isGenerating || isGeneratingImage || isFetchingSourceImage}>
+                      {(isGenerating || isGeneratingImage || isFetchingSourceImage) ? <Loader2 className="mr-1 h-3 w-3 animate-spin" /> : <Image className="mr-1 h-3 w-3" />}
                       Image <ChevronDown className="ml-1 h-3 w-3" />
                     </Button>
                   </DropdownMenuTrigger>
@@ -190,6 +194,15 @@ export function DraftEditorSheet({
                     <DropdownMenuItem onClick={() => onGenerateImage(imageDescription)} disabled={!imageDescription}>
                       <Image className="mr-2 h-4 w-4" /> Generate Image
                     </DropdownMenuItem>
+                    {draft?.source_url && onFetchSourceImage && (
+                      <>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem onClick={onFetchSourceImage} disabled={isFetchingSourceImage}>
+                          <Globe className="mr-2 h-4 w-4" /> 
+                          {isFetchingSourceImage ? 'Fetching...' : 'Fetch from Source'}
+                        </DropdownMenuItem>
+                      </>
+                    )}
                     <DropdownMenuSeparator />
                     <DropdownMenuItem onClick={() => setShowAssetPicker(true)}>
                       <FolderOpen className="mr-2 h-4 w-4" /> Choose from Library

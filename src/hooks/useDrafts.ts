@@ -27,7 +27,7 @@ export function useDrafts() {
   });
 
   const createDraft = useMutation({
-    mutationFn: async (draft: { title: string; body: string; topic_id?: string; hashtags_broad?: string[]; hashtags_niche?: string[]; hashtags_trending?: string[]; image_description?: string; status?: PostStatus }) => {
+    mutationFn: async (draft: { title: string; body: string; topic_id?: string; hashtags_broad?: string[]; hashtags_niche?: string[]; hashtags_trending?: string[]; image_description?: string; status?: PostStatus; source_url?: string }) => {
       const { data, error } = await supabase
         .from('post_drafts')
         .insert([draft])

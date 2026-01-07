@@ -17,7 +17,7 @@ import { toast } from 'sonner';
 
 export default function Drafts() {
   const { drafts, createDraft, updateDraft, updateDraftStatus, deleteDraft } = useDrafts();
-  const { generateContent, generateImage, isGenerating } = useAIGeneration();
+  const { generateContent, generateImage, fetchSourceImage, isGenerating, isFetchingSourceImage } = useAIGeneration();
   const { isConnected, publishToLinkedIn, connection } = useLinkedIn();
   
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -133,6 +133,22 @@ export default function Drafts() {
         onSuccess: () => {
           setEditDraft(prev => prev ? { ...prev, image_asset_id: assetId } : null);
           toast.success('Image attached to draft');
+        }
+      }
+    );
+  };
+
+  const handleFetchSourceImage = () => {
+    if (!editDraft || !editDraft.source_url) {
+      toast.error('No source URL available for this draft');
+      return;
+    }
+    fetchSourceImage.mutate(
+      { source_url: editDraft.source_url, draft_id: editDraft.id },
+      {
+        onSuccess: () => {
+          // Refresh the draft to get the new image
+          setEditDraft(prev => prev ? { ...prev } : null);
         }
       }
     );
@@ -295,9 +311,11 @@ export default function Drafts() {
           onGenerateHashtags={handleGenerateHashtags}
           onGenerateImageDescription={handleGenerateImageDescription}
           onGenerateImage={handleGenerateImage}
+          onFetchSourceImage={handleFetchSourceImage}
           onAttachAsset={handleAttachAsset}
           isGenerating={isGenerating}
           isGeneratingImage={isGeneratingImage}
+          isFetchingSourceImage={isFetchingSourceImage}
           profileName={connection?.profile_name || undefined}
           profileAvatar={connection?.avatar_url || undefined}
           profileHeadline={connection?.headline || undefined}
