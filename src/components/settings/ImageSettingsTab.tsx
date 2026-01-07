@@ -59,25 +59,27 @@ export function ImageSettingsTab() {
         <CardContent className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="image_generation_model">Image Generation Model</Label>
-            <Select
-              value={getImageModel()}
-              onValueChange={handleModelChange}
-              disabled={!isAdmin}
-            >
-              <SelectTrigger id="image_generation_model" className="w-full max-w-md">
-                <SelectValue placeholder="Select image model" />
-              </SelectTrigger>
-              <SelectContent>
-                {IMAGE_MODELS.map((model) => (
-                  <SelectItem key={model.value} value={model.value}>
-                    <div className="flex flex-col">
-                      <span>{model.label}</span>
-                      <span className="text-xs text-muted-foreground">{model.description}</span>
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <div dir="ltr" className="w-full max-w-md">
+              <Select
+                value={getImageModel()}
+                onValueChange={handleModelChange}
+                disabled={!isAdmin}
+              >
+                <SelectTrigger id="image_generation_model">
+                  <SelectValue placeholder="Select image model" />
+                </SelectTrigger>
+                <SelectContent>
+                  {IMAGE_MODELS.map((model) => (
+                    <SelectItem key={model.value} value={model.value}>
+                      <div className="flex flex-col">
+                        <span>{model.label}</span>
+                        <span className="text-xs text-muted-foreground">{model.description}</span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           <div className="rounded-lg border border-border bg-muted/50 p-4 space-y-2">
