@@ -1,12 +1,10 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Button } from '@/components/ui/button';
 import { useSettings } from '@/hooks/useSettings';
 import { useAuth } from '@/contexts/AuthContext';
-import { Settings } from 'lucide-react';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 const IMAGE_MODELS = [
   { 
@@ -32,7 +30,7 @@ const IMAGE_MODELS = [
 export function ImageSettingsTab() {
   const { getSetting, upsertSetting } = useSettings();
   const { isAdmin } = useAuth();
-  const navigate = useNavigate();
+  const { t } = useLanguage();
   const [localModel, setLocalModel] = useState<string | null>(null);
 
   const getImageModel = () => {
@@ -50,51 +48,53 @@ export function ImageSettingsTab() {
     <div className="space-y-6 animate-fade-in">
       <Card>
         <CardHeader>
-          <CardTitle>Image Generation Settings</CardTitle>
+          <CardTitle>{t.settingsImages.title}</CardTitle>
           <CardDescription>
-            Choose the AI model for generating images for your LinkedIn posts
-            {!isAdmin && <span className="ml-1 text-amber-500">(View only - Admin access required)</span>}
+            {t.settingsImages.description}
+            {!isAdmin && <span className="ml-1 text-amber-500">{t.common.adminOnly}</span>}
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="image_generation_model">Image Generation Model</Label>
-            <div dir="ltr" className="w-full max-w-md">
-              <Select
-                value={getImageModel()}
-                onValueChange={handleModelChange}
-                disabled={!isAdmin}
-              >
-                <SelectTrigger id="image_generation_model">
-                  <SelectValue placeholder="Select image model" />
-                </SelectTrigger>
-                <SelectContent>
-                  {IMAGE_MODELS.map((model) => (
-                    <SelectItem key={model.value} value={model.value}>
-                      <div className="flex flex-col">
-                        <span>{model.label}</span>
-                        <span className="text-xs text-muted-foreground">{model.description}</span>
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+        <CardContent>
+          <div dir="ltr" className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="image_generation_model">{t.settingsImages.modelLabel}</Label>
+              <div className="w-full max-w-md">
+                <Select
+                  value={getImageModel()}
+                  onValueChange={handleModelChange}
+                  disabled={!isAdmin}
+                >
+                  <SelectTrigger id="image_generation_model">
+                    <SelectValue placeholder="Select image model" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {IMAGE_MODELS.map((model) => (
+                      <SelectItem key={model.value} value={model.value}>
+                        <div className="flex flex-col">
+                          <span>{model.label}</span>
+                          <span className="text-xs text-muted-foreground">{model.description}</span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
-          </div>
 
-          <div className="rounded-lg border border-border bg-muted/50 p-4 space-y-2">
-            <h4 className="font-medium text-sm">Model Notes</h4>
-            <ul className="text-sm text-muted-foreground space-y-1">
-              <li>• <strong>Gemini models</strong> use Lovable AI - no additional API key required</li>
-              <li>• <strong>DALL-E 3</strong> requires an OpenAI API key configured in secrets</li>
-              <li>• Flash model is faster but may have slightly lower quality</li>
-            </ul>
-          </div>
+            <div className="rounded-lg border border-border bg-muted/50 p-4 space-y-2">
+              <h4 className="font-medium text-sm">{t.settingsImages.modelNotes}</h4>
+              <ul className="text-sm text-muted-foreground space-y-1">
+                <li>• <strong>Gemini models</strong> {t.settingsImages.geminiNote}</li>
+                <li>• <strong>DALL-E 3</strong> {t.settingsImages.dalleNote}</li>
+                <li>• {t.settingsImages.flashNote}</li>
+              </ul>
+            </div>
 
-          <div className="pt-2">
-            <p className="text-sm text-muted-foreground mb-2">
-              You can access this setting from the draft editor via the Image dropdown → "Choose Model"
-            </p>
+            <div className="pt-2">
+              <p className="text-sm text-muted-foreground">
+                {t.settingsImages.accessTip}
+              </p>
+            </div>
           </div>
         </CardContent>
       </Card>
