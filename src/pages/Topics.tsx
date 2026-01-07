@@ -7,6 +7,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useDrafts } from '@/hooks/useDrafts';
 import { useNewsResearch, type NewsItem } from '@/hooks/useNewsResearch';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { useNavigate } from 'react-router-dom';
 import { Sparkles, Star, Archive, FileEdit, Trash2, Loader2, Search, Newspaper, ExternalLink, ChevronDown, ChevronUp, CheckSquare, X } from 'lucide-react';
 import { toast } from 'sonner';
@@ -15,6 +16,7 @@ import { useTranslation } from '@/hooks/useTranslation';
 
 export default function Topics() {
   const { t } = useTranslation();
+  const { contentLanguage } = useLanguage();
   const { createDraft } = useDrafts();
   const { newsItems, researchNews, updateStatus, deleteNewsItem, isResearching, researchStatus } = useNewsResearch();
   const navigate = useNavigate();
@@ -33,6 +35,7 @@ export default function Topics() {
       title: item.title,
       body: item.summary || '',
       source_url: item.source_url || undefined,
+      language: contentLanguage,
     });
     updateStatus.mutate({ id: item.id, status: 'used' });
     toast.success(t.drafts.status.draft + ' ' + t.common.success.toLowerCase());
@@ -95,6 +98,7 @@ export default function Topics() {
         title: item.title,
         body: item.summary || '',
         source_url: item.source_url || undefined,
+        language: contentLanguage,
       });
       updateStatus.mutate({ id: item.id, status: 'used' });
     });
