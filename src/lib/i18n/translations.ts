@@ -65,6 +65,42 @@ export interface Translations {
     shortlisted: string;
     archived: string;
     noTopics: string;
+    researchAITools: string;
+    discoverDescription: string;
+    noToolsYet: string;
+    startResearch: string;
+    selectAll: string;
+    clear: string;
+    selected: string;
+    toDrafts: string;
+    showMore: string;
+    showLess: string;
+    summary: string;
+    fullContent: string;
+    visitTool: string;
+    viewSource: string;
+    used: string;
+  };
+  research: {
+    title: string;
+    description: string;
+    searchQuery: string;
+    quickPicks: string;
+    numberOfResults: string;
+    searching: string;
+  };
+  assetDetail: {
+    title: string;
+    prompt: string;
+    created: string;
+    model: string;
+    size: string;
+    copyUrl: string;
+    noImage: string;
+    invalidUrl: string;
+    urlCopied: string;
+    downloadStarted: string;
+    downloadFailed: string;
   };
   drafts: {
     title: string;
@@ -229,8 +265,8 @@ export const translations: Record<Language, Translations> = {
       noDrafts: 'No drafts yet. Create one from an AI tool!',
     },
     topics: {
-      title: 'Topics',
-      subtitle: 'Research and manage your content ideas',
+      title: 'AI Tools Research',
+      subtitle: 'Discover and curate AI tools for LinkedIn posts',
       research: 'Research',
       generateTopics: 'Generate Topics',
       createDraft: 'Create Draft',
@@ -240,6 +276,42 @@ export const translations: Record<Language, Translations> = {
       shortlisted: 'Shortlisted',
       archived: 'Archived',
       noTopics: 'No topics yet',
+      researchAITools: 'Research AI Tools',
+      discoverDescription: 'Click "Research AI Tools" to discover the latest AI tools from GitHub, Taaft, and more',
+      noToolsYet: 'No AI tools discovered yet',
+      startResearch: 'Start Research',
+      selectAll: 'Select All',
+      clear: 'Clear',
+      selected: 'selected',
+      toDrafts: 'To Drafts',
+      showMore: 'Show more',
+      showLess: 'Show less',
+      summary: 'Summary',
+      fullContent: 'Full Content',
+      visitTool: 'Visit Tool',
+      viewSource: 'View Source',
+      used: 'Used',
+    },
+    research: {
+      title: 'Research AI Tools',
+      description: 'Search for the latest practical AI tools from GitHub, Taaft, and other sources. Results will be summarized for easy LinkedIn post creation.',
+      searchQuery: 'Search Query (optional)',
+      quickPicks: 'Quick picks',
+      numberOfResults: 'Number of results',
+      searching: 'Researching...',
+    },
+    assetDetail: {
+      title: 'Asset Details',
+      prompt: 'Prompt',
+      created: 'Created',
+      model: 'Model',
+      size: 'Size',
+      copyUrl: 'Copy URL',
+      noImage: 'No image available',
+      invalidUrl: 'Invalid image URL - please regenerate this image',
+      urlCopied: 'URL copied to clipboard',
+      downloadStarted: 'Download started',
+      downloadFailed: 'Failed to download image',
     },
     drafts: {
       title: 'Drafts',
@@ -402,8 +474,8 @@ export const translations: Record<Language, Translations> = {
       noDrafts: 'אין עדיין טיוטות. צור אחת מכלי AI!',
     },
     topics: {
-      title: 'נושאים',
-      subtitle: 'חקור ונהל את רעיונות התוכן שלך',
+      title: 'מחקר כלי AI',
+      subtitle: 'גלה ואסוף כלי AI לפוסטים בלינקדאין',
       research: 'מחקר',
       generateTopics: 'צור נושאים',
       createDraft: 'צור טיוטה',
@@ -413,6 +485,42 @@ export const translations: Record<Language, Translations> = {
       shortlisted: 'ברשימה מקוצרת',
       archived: 'בארכיון',
       noTopics: 'אין עדיין נושאים',
+      researchAITools: 'חקור כלי AI',
+      discoverDescription: 'לחץ על "חקור כלי AI" כדי לגלות את כלי ה-AI העדכניים ביותר מ-GitHub, Taaft ועוד',
+      noToolsYet: 'לא נמצאו עדיין כלי AI',
+      startResearch: 'התחל מחקר',
+      selectAll: 'בחר הכל',
+      clear: 'נקה',
+      selected: 'נבחרו',
+      toDrafts: 'לטיוטות',
+      showMore: 'הצג עוד',
+      showLess: 'הצג פחות',
+      summary: 'סיכום',
+      fullContent: 'תוכן מלא',
+      visitTool: 'בקר בכלי',
+      viewSource: 'הצג מקור',
+      used: 'בשימוש',
+    },
+    research: {
+      title: 'חקור כלי AI',
+      description: 'חפש את כלי ה-AI המעשיים האחרונים מ-GitHub, Taaft ומקורות נוספים. התוצאות יסוכמו ליצירת פוסטים קלה בלינקדאין.',
+      searchQuery: 'שאילתת חיפוש (אופציונלי)',
+      quickPicks: 'בחירות מהירות',
+      numberOfResults: 'מספר תוצאות',
+      searching: 'מחפש...',
+    },
+    assetDetail: {
+      title: 'פרטי נכס',
+      prompt: 'פרומפט',
+      created: 'נוצר',
+      model: 'מודל',
+      size: 'גודל',
+      copyUrl: 'העתק קישור',
+      noImage: 'אין תמונה זמינה',
+      invalidUrl: 'קישור תמונה לא תקין - נא ליצור מחדש',
+      urlCopied: 'הקישור הועתק ללוח',
+      downloadStarted: 'ההורדה החלה',
+      downloadFailed: 'ההורדה נכשלה',
     },
     drafts: {
       title: 'טיוטות',
