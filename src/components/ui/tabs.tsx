@@ -8,14 +8,13 @@ const Tabs = TabsPrimitive.Root;
 const TabsList = React.forwardRef<
   React.ElementRef<typeof TabsPrimitive.List>,
   React.ComponentPropsWithoutRef<typeof TabsPrimitive.List> & { dir?: "ltr" | "rtl" }
->(({ className, dir, ...props }, ref) => (
+>(({ className, dir, style, ...props }, ref) => (
   <TabsPrimitive.List
     ref={ref}
     dir={dir}
+    style={dir === "ltr" ? { ...style, flexDirection: "row" as const } : style}
     className={cn(
       "inline-flex h-10 items-center justify-center rounded-md bg-muted p-1 text-muted-foreground",
-      // When dir="ltr" is explicitly set, force left-to-right flex order
-      dir === "ltr" && "flex-row",
       className,
     )}
     {...props}

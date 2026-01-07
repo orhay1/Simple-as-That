@@ -27,6 +27,10 @@ export interface Translations {
     retry: string;
     signOut: string;
     role: string;
+    reset: string;
+    characters: string;
+    modified: string;
+    adminOnly: string;
   };
   navigation: {
     dashboard: string;
@@ -191,6 +195,89 @@ export interface Translations {
     english: string;
     hebrew: string;
   };
+  settingsPrompts: {
+    title: string;
+    description: string;
+    researchSystem: string;
+    researchSystemDesc: string;
+    researchQuery: string;
+    researchQueryDesc: string;
+    summaryPolish: string;
+    summaryPolishDesc: string;
+    hashtagGenerator: string;
+    hashtagGeneratorDesc: string;
+    imageGenerator: string;
+    imageGeneratorDesc: string;
+  };
+  settingsVoice: {
+    title: string;
+    description: string;
+    creativityPreset: string;
+    defaultTone: string;
+    ctaStyle: string;
+    jargonLevel: string;
+    emojiUsage: string;
+    maxLengthTarget: string;
+    maxLengthDesc: string;
+    selectPlaceholder: string;
+    options: {
+      conservative: string;
+      balanced: string;
+      bold: string;
+      founder: string;
+      educational: string;
+      contrarian: string;
+      story: string;
+      question: string;
+      soft: string;
+      none: string;
+      low: string;
+      medium: string;
+      high: string;
+      light: string;
+      normal: string;
+    };
+  };
+  settingsImages: {
+    title: string;
+    description: string;
+    modelLabel: string;
+    modelNotes: string;
+    geminiNote: string;
+    dalleNote: string;
+    flashNote: string;
+    accessTip: string;
+  };
+  settingsGuardrails: {
+    title: string;
+    description: string;
+    bannedPhrases: string;
+    bannedPhrasesDesc: string;
+    disclaimers: string;
+    disclaimersDesc: string;
+    noClickbait: string;
+    noClickbaitDesc: string;
+    allowLinks: string;
+    allowLinksDesc: string;
+    enforceRules: string;
+    enforceRulesDesc: string;
+    maxHashtags: string;
+    dedupeThreshold: string;
+    dedupeDesc: string;
+    saveChanges: string;
+    aiSuggestions: string;
+    aiSuggestionsDesc: string;
+    contextLabel: string;
+    contextPlaceholder: string;
+    getSuggestions: string;
+    suggestions: string;
+    suggestedBanned: string;
+    suggestedDisclaimers: string;
+    recommendedRules: string;
+    apply: string;
+    addBannedPlaceholder: string;
+    addDisclaimerPlaceholder: string;
+  };
   auth: {
     signIn: string;
     signUp: string;
@@ -238,6 +325,10 @@ export const translations: Record<Language, Translations> = {
       retry: 'Retry',
       signOut: 'Sign Out',
       role: 'Role',
+      reset: 'Reset',
+      characters: 'characters',
+      modified: 'Modified',
+      adminOnly: '(View only - Admin access required)',
     },
     navigation: {
       dashboard: 'Dashboard',
@@ -402,6 +493,89 @@ export const translations: Record<Language, Translations> = {
       english: 'English',
       hebrew: 'עברית (Hebrew)',
     },
+    settingsPrompts: {
+      title: 'AI Prompts',
+      description: 'Configure prompts for research, content generation, and images',
+      researchSystem: 'AI Research System Prompt',
+      researchSystemDesc: 'Instructions for finding and analyzing AI tools',
+      researchQuery: 'AI Research Query',
+      researchQueryDesc: 'Default search query for discovering tools',
+      summaryPolish: 'Summary Polish Prompt',
+      summaryPolishDesc: 'Transforms raw research into LinkedIn-ready summaries',
+      hashtagGenerator: 'Hashtag Generator Prompt',
+      hashtagGeneratorDesc: 'Generates relevant hashtags for posts',
+      imageGenerator: 'Image Generator Prompt',
+      imageGeneratorDesc: 'Creates image descriptions for AI generation',
+    },
+    settingsVoice: {
+      title: 'Voice & Style Settings',
+      description: 'Configure the tone and style for AI-generated content. These settings affect how rewrite actions and content generation behave.',
+      creativityPreset: 'Creativity Preset',
+      defaultTone: 'Default Tone',
+      ctaStyle: 'CTA Style',
+      jargonLevel: 'Jargon Level',
+      emojiUsage: 'Emoji Usage',
+      maxLengthTarget: 'Max Length Target',
+      maxLengthDesc: 'Target character count for post content',
+      selectPlaceholder: 'Select',
+      options: {
+        conservative: 'Conservative',
+        balanced: 'Balanced',
+        bold: 'Bold',
+        founder: 'Founder',
+        educational: 'Educational',
+        contrarian: 'Contrarian',
+        story: 'Story',
+        question: 'Question',
+        soft: 'Soft',
+        none: 'None',
+        low: 'Low',
+        medium: 'Medium',
+        high: 'High',
+        light: 'Light',
+        normal: 'Normal',
+      },
+    },
+    settingsImages: {
+      title: 'Image Generation Settings',
+      description: 'Choose the AI model for generating images for your LinkedIn posts',
+      modelLabel: 'Image Generation Model',
+      modelNotes: 'Model Notes',
+      geminiNote: 'Gemini models use Lovable AI - no additional API key required',
+      dalleNote: 'DALL-E 3 requires an OpenAI API key configured in secrets',
+      flashNote: 'Flash model is faster but may have slightly lower quality',
+      accessTip: 'You can access this setting from the draft editor via the Image dropdown → "Choose Model"',
+    },
+    settingsGuardrails: {
+      title: 'Content Rules',
+      description: 'Define guardrails for content quality and compliance',
+      bannedPhrases: 'Banned Phrases',
+      bannedPhrasesDesc: 'Words or phrases that should never appear in content',
+      disclaimers: 'Required Disclaimers',
+      disclaimersDesc: 'Disclaimers that must be included when applicable',
+      noClickbait: 'No Clickbait',
+      noClickbaitDesc: 'Avoid sensational language',
+      allowLinks: 'Allow Links',
+      allowLinksDesc: 'Permit URLs in content',
+      enforceRules: 'Enforce Rules',
+      enforceRulesDesc: 'Block vs. warn on violations',
+      maxHashtags: 'Max Hashtags',
+      dedupeThreshold: 'Duplicate Detection Threshold',
+      dedupeDesc: 'Similarity threshold for flagging duplicate content',
+      saveChanges: 'Save Changes',
+      aiSuggestions: 'AI Suggestions',
+      aiSuggestionsDesc: 'Get AI-powered guardrail recommendations based on your context',
+      contextLabel: 'Describe your context',
+      contextPlaceholder: 'e.g., B2B SaaS company targeting enterprise CTOs, focused on AI/ML content. We want professional, authoritative content without hype...',
+      getSuggestions: 'Get AI Suggestions',
+      suggestions: 'Suggestions',
+      suggestedBanned: 'Suggested Banned Phrases',
+      suggestedDisclaimers: 'Suggested Disclaimers',
+      recommendedRules: 'Recommended Rules',
+      apply: 'Apply',
+      addBannedPlaceholder: 'Add banned phrase...',
+      addDisclaimerPlaceholder: 'Add disclaimer...',
+    },
     auth: {
       signIn: 'Sign In',
       signUp: 'Sign Up',
@@ -447,6 +621,10 @@ export const translations: Record<Language, Translations> = {
       retry: 'נסה שוב',
       signOut: 'התנתק',
       role: 'תפקיד',
+      reset: 'איפוס',
+      characters: 'תווים',
+      modified: 'שונה',
+      adminOnly: '(צפייה בלבד - נדרשת הרשאת מנהל)',
     },
     navigation: {
       dashboard: 'לוח בקרה',
@@ -610,6 +788,89 @@ export const translations: Record<Language, Translations> = {
       contentLanguageDescription: 'שפת ברירת המחדל ליצירת פוסטים בלינקדאין',
       english: 'English (אנגלית)',
       hebrew: 'עברית',
+    },
+    settingsPrompts: {
+      title: 'פרומפטים של AI',
+      description: 'הגדר פרומפטים למחקר, יצירת תוכן ותמונות',
+      researchSystem: 'פרומפט מערכת למחקר AI',
+      researchSystemDesc: 'הוראות לאיתור וניתוח כלי AI',
+      researchQuery: 'שאילתת מחקר AI',
+      researchQueryDesc: 'שאילתת חיפוש ברירת מחדל לגילוי כלים',
+      summaryPolish: 'פרומפט ליטוש סיכום',
+      summaryPolishDesc: 'הופך מחקר גולמי לסיכומים מוכנים ללינקדאין',
+      hashtagGenerator: 'פרומפט יצירת האשטאגים',
+      hashtagGeneratorDesc: 'מייצר האשטאגים רלוונטיים לפוסטים',
+      imageGenerator: 'פרומפט יצירת תמונות',
+      imageGeneratorDesc: 'יוצר תיאורי תמונות ליצירה באמצעות AI',
+    },
+    settingsVoice: {
+      title: 'הגדרות קול וסגנון',
+      description: 'הגדר את הטון והסגנון לתוכן שנוצר ע"י AI. הגדרות אלו משפיעות על פעולות כתיבה מחדש ויצירת תוכן.',
+      creativityPreset: 'רמת יצירתיות',
+      defaultTone: 'טון ברירת מחדל',
+      ctaStyle: 'סגנון קריאה לפעולה',
+      jargonLevel: 'רמת ז\'רגון',
+      emojiUsage: 'שימוש באימוג\'י',
+      maxLengthTarget: 'אורך מטרה מקסימלי',
+      maxLengthDesc: 'מספר תווים מטרה לתוכן הפוסט',
+      selectPlaceholder: 'בחר',
+      options: {
+        conservative: 'שמרני',
+        balanced: 'מאוזן',
+        bold: 'נועז',
+        founder: 'מייסד',
+        educational: 'חינוכי',
+        contrarian: 'נגד הזרם',
+        story: 'סיפור',
+        question: 'שאלה',
+        soft: 'רך',
+        none: 'ללא',
+        low: 'נמוך',
+        medium: 'בינוני',
+        high: 'גבוה',
+        light: 'קל',
+        normal: 'רגיל',
+      },
+    },
+    settingsImages: {
+      title: 'הגדרות יצירת תמונות',
+      description: 'בחר את מודל ה-AI ליצירת תמונות לפוסטים שלך בלינקדאין',
+      modelLabel: 'מודל יצירת תמונות',
+      modelNotes: 'הערות על המודלים',
+      geminiNote: 'מודלי Gemini משתמשים ב-Lovable AI - לא נדרש מפתח API נוסף',
+      dalleNote: 'DALL-E 3 דורש מפתח API של OpenAI שמוגדר בסודות',
+      flashNote: 'מודל Flash מהיר יותר אך עשוי להיות באיכות מעט נמוכה יותר',
+      accessTip: 'ניתן לגשת להגדרה זו מעורך הטיוטה דרך תפריט תמונה → "בחר מודל"',
+    },
+    settingsGuardrails: {
+      title: 'כללי תוכן',
+      description: 'הגדר מגבלות לאיכות תוכן ותאימות',
+      bannedPhrases: 'ביטויים אסורים',
+      bannedPhrasesDesc: 'מילים או ביטויים שלעולם לא צריכים להופיע בתוכן',
+      disclaimers: 'הצהרות נדרשות',
+      disclaimersDesc: 'הצהרות שחייבות להיכלל במידת הצורך',
+      noClickbait: 'ללא קליקבייט',
+      noClickbaitDesc: 'הימנע משפה סנסציונית',
+      allowLinks: 'אפשר קישורים',
+      allowLinksDesc: 'התר כתובות URL בתוכן',
+      enforceRules: 'אכוף כללים',
+      enforceRulesDesc: 'חסום לעומת הזהר על הפרות',
+      maxHashtags: 'מקסימום האשטאגים',
+      dedupeThreshold: 'סף זיהוי כפילויות',
+      dedupeDesc: 'סף דמיון לסימון תוכן כפול',
+      saveChanges: 'שמור שינויים',
+      aiSuggestions: 'הצעות AI',
+      aiSuggestionsDesc: 'קבל המלצות מגבלות מונעות AI בהתבסס על ההקשר שלך',
+      contextLabel: 'תאר את ההקשר שלך',
+      contextPlaceholder: 'לדוגמה, חברת B2B SaaS שמכוונת לסמנכ"לי טכנולוגיה בארגונים, מתמקדת בתוכן AI/ML. אנחנו רוצים תוכן מקצועי וסמכותי ללא הייפ...',
+      getSuggestions: 'קבל הצעות AI',
+      suggestions: 'הצעות',
+      suggestedBanned: 'ביטויים אסורים מוצעים',
+      suggestedDisclaimers: 'הצהרות מוצעות',
+      recommendedRules: 'כללים מומלצים',
+      apply: 'החל',
+      addBannedPlaceholder: 'הוסף ביטוי אסור...',
+      addDisclaimerPlaceholder: 'הוסף הצהרה...',
     },
     auth: {
       signIn: 'התחבר',

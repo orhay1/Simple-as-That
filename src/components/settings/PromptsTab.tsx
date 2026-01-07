@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { useSettings } from '@/hooks/useSettings';
 import { useAuth } from '@/contexts/AuthContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { ChevronDown, Save, Loader2, RotateCcw } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -18,9 +19,15 @@ interface PromptItemProps {
   onReset: () => void;
   isSaving: boolean;
   disabled: boolean;
+  t: {
+    reset: string;
+    save: string;
+    characters: string;
+    modified: string;
+  };
 }
 
-function PromptItem({ title, description, value, defaultValue, onChange, onSave, onReset, isSaving, disabled }: PromptItemProps) {
+function PromptItem({ title, description, value, defaultValue, onChange, onSave, onReset, isSaving, disabled, t }: PromptItemProps) {
   const [isOpen, setIsOpen] = useState(false);
   const isModified = value !== defaultValue && value !== '';
 
@@ -33,7 +40,7 @@ function PromptItem({ title, description, value, defaultValue, onChange, onSave,
             <p className="text-sm text-muted-foreground">{description}</p>
           </div>
           {isModified && (
-            <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs text-primary">Modified</span>
+            <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs text-primary">{t.modified}</span>
           )}
         </div>
         <ChevronDown className={cn("h-5 w-5 text-muted-foreground transition-transform duration-200", isOpen && "rotate-180")} />
@@ -45,10 +52,11 @@ function PromptItem({ title, description, value, defaultValue, onChange, onSave,
             onChange={(e) => onChange(e.target.value)}
             placeholder="Enter prompt..."
             className="min-h-[200px] resize-y font-mono text-sm"
+            dir="ltr"
             disabled={disabled}
           />
-          <div className="flex items-center justify-between">
-            <span className="text-xs text-muted-foreground">{(value || defaultValue).length} characters</span>
+          <div className="flex items-center justify-between" dir="ltr">
+            <span className="text-xs text-muted-foreground">{(value || defaultValue).length} {t.characters}</span>
             <div className="flex gap-2">
               <Button 
                 onClick={onReset} 
@@ -57,11 +65,11 @@ function PromptItem({ title, description, value, defaultValue, onChange, onSave,
                 variant="outline"
               >
                 <RotateCcw className="mr-2 h-4 w-4" />
-                Reset
+                {t.reset}
               </Button>
               <Button onClick={onSave} disabled={disabled || isSaving} size="sm">
                 {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-                Save
+                {t.save}
               </Button>
             </div>
           </div>
@@ -115,30 +123,37 @@ STYLE RULES:
 
 Return ONLY the summary text. No headers, no formatting, no quotes.`;
 
-const PROMPTS_CONFIG = [
-  { 
-    key: 'perplexity_system_prompt', 
-    title: 'AI Research System Prompt', 
-    description: 'Instructions for finding and analyzing AI tools',
-    defaultValue: DEFAULT_PERPLEXITY_SYSTEM_PROMPT
-  },
-  { 
-    key: 'perplexity_user_prompt', 
-    title: 'AI Research Query', 
-    description: 'Default search query for discovering tools',
-    defaultValue: DEFAULT_PERPLEXITY_USER_PROMPT
-  },
-  { 
-    key: 'research_polish_prompt', 
-    title: 'Summary Polish Prompt', 
-    description: 'Transforms raw research into LinkedIn-ready summaries',
-    defaultValue: DEFAULT_POLISH_PROMPT
-  },
-  { 
-    key: 'hashtag_generator_prompt', 
-    title: 'Hashtag Generator Prompt', 
-    description: 'Generates relevant hashtags for posts',
-    defaultValue: `Generate PRECISE, TOOL-SPECIFIC hashtags for this LinkedIn post.
+export function PromptsTab() {
+  const { getSetting, upsertSetting } = useSettings();
+  const { isAdmin } = useAuth();
+  const { t } = useLanguage();
+  const [prompts, setPrompts] = useState<Record<string, string>>({});
+  const [savingKey, setSavingKey] = useState<string | null>(null);
+
+  const PROMPTS_CONFIG = [
+    { 
+      key: 'perplexity_system_prompt', 
+      title: t.settingsPrompts.researchSystem, 
+      description: t.settingsPrompts.researchSystemDesc,
+      defaultValue: DEFAULT_PERPLEXITY_SYSTEM_PROMPT
+    },
+    { 
+      key: 'perplexity_user_prompt', 
+      title: t.settingsPrompts.researchQuery, 
+      description: t.settingsPrompts.researchQueryDesc,
+      defaultValue: DEFAULT_PERPLEXITY_USER_PROMPT
+    },
+    { 
+      key: 'research_polish_prompt', 
+      title: t.settingsPrompts.summaryPolish, 
+      description: t.settingsPrompts.summaryPolishDesc,
+      defaultValue: DEFAULT_POLISH_PROMPT
+    },
+    { 
+      key: 'hashtag_generator_prompt', 
+      title: t.settingsPrompts.hashtagGenerator, 
+      description: t.settingsPrompts.hashtagGeneratorDesc,
+      defaultValue: `Generate PRECISE, TOOL-SPECIFIC hashtags for this LinkedIn post.
 
 Post Title: {title}
 Post Content: {body}
@@ -150,12 +165,12 @@ Instructions:
 4. MAXIMUM 5 hashtags total
 
 Return JSON with: hashtags_broad (1-2), hashtags_niche (2-3 including tool name), hashtags_trending (0-1).`
-  },
-  { 
-    key: 'image_generator_prompt', 
-    title: 'Image Generator Prompt', 
-    description: 'Creates image descriptions for AI generation',
-    defaultValue: `Create an image for this AI tool post. Title: {title}, Content: {body}
+    },
+    { 
+      key: 'image_generator_prompt', 
+      title: t.settingsPrompts.imageGenerator, 
+      description: t.settingsPrompts.imageGeneratorDesc,
+      defaultValue: `Create an image for this AI tool post. Title: {title}, Content: {body}
 
 IDENTIFY the specific tool and its function. Create a visual concept that represents:
 - The tool's core functionality (code generation, image creation, data analysis, etc.)
@@ -165,14 +180,8 @@ IDENTIFY the specific tool and its function. Create a visual concept that repres
 AVOID: Generic office scenes, people at desks, business meetings, stock photo imagery.
 
 Return ONLY a 1-2 sentence image description (max 40 words) specific to this tool.`
-  },
-];
-
-export function PromptsTab() {
-  const { getSetting, upsertSetting } = useSettings();
-  const { isAdmin } = useAuth();
-  const [prompts, setPrompts] = useState<Record<string, string>>({});
-  const [savingKey, setSavingKey] = useState<string | null>(null);
+    },
+  ];
 
   const getPromptValue = (key: string, defaultValue: string) => {
     if (prompts[key] !== undefined) return prompts[key];
@@ -204,10 +213,10 @@ export function PromptsTab() {
     <div className="space-y-6 animate-fade-in">
       <Card>
         <CardHeader>
-          <CardTitle>AI Prompts</CardTitle>
+          <CardTitle>{t.settingsPrompts.title}</CardTitle>
           <CardDescription>
-            Configure prompts for research, content generation, and images
-            {!isAdmin && <span className="ml-1 text-amber-500">(View only - Admin access required)</span>}
+            {t.settingsPrompts.description}
+            {!isAdmin && <span className="ml-1 text-amber-500">{t.common.adminOnly}</span>}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
@@ -223,6 +232,12 @@ export function PromptsTab() {
               onReset={() => handleReset(config.key, config.defaultValue)}
               isSaving={savingKey === config.key}
               disabled={!isAdmin}
+              t={{
+                reset: t.common.reset,
+                save: t.common.save,
+                characters: t.common.characters,
+                modified: t.common.modified,
+              }}
             />
           ))}
         </CardContent>
