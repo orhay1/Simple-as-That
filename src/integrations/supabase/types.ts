@@ -236,6 +236,7 @@ export type Database = {
           image_description: string | null
           published_url: string | null
           scheduled_at: string | null
+          source_url: string | null
           status: Database["public"]["Enums"]["post_status"]
           title: string
           topic_id: string | null
@@ -253,6 +254,7 @@ export type Database = {
           image_description?: string | null
           published_url?: string | null
           scheduled_at?: string | null
+          source_url?: string | null
           status?: Database["public"]["Enums"]["post_status"]
           title: string
           topic_id?: string | null
@@ -270,6 +272,7 @@ export type Database = {
           image_description?: string | null
           published_url?: string | null
           scheduled_at?: string | null
+          source_url?: string | null
           status?: Database["public"]["Enums"]["post_status"]
           title?: string
           topic_id?: string | null

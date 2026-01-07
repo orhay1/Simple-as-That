@@ -31,6 +31,7 @@ export interface PostDraft {
   hashtags_trending: string[] | null;
   image_description: string | null;
   image_asset_id: string | null;
+  source_url: string | null;
   status: PostStatus;
   scheduled_at: string | null;
   published_url: string | null;

@@ -17,3 +17,6 @@ verify_jwt = false
 
 [functions.research-ai-news]
 verify_jwt = false
+
+[functions.fetch-source-image]
+verify_jwt = false

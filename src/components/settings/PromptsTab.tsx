@@ -134,13 +134,33 @@ const PROMPTS_CONFIG = [
     key: 'hashtag_generator_prompt', 
     title: 'Hashtag Generator Prompt', 
     description: 'Generates relevant hashtags for posts',
-    defaultValue: 'Generate strategic LinkedIn hashtags for maximum reach and engagement.'
+    defaultValue: `Generate PRECISE, TOOL-SPECIFIC hashtags for this LinkedIn post.
+
+Post Title: {title}
+Post Content: {body}
+
+Instructions:
+1. Extract the EXACT tool name from the content and create a hashtag for it (e.g., #CursorAI, #ClaudeAI)
+2. Add 2 niche hashtags specific to what the tool does
+3. Add 1-2 broad category hashtags
+4. MAXIMUM 5 hashtags total
+
+Return JSON with: hashtags_broad (1-2), hashtags_niche (2-3 including tool name), hashtags_trending (0-1).`
   },
   { 
     key: 'image_generator_prompt', 
     title: 'Image Generator Prompt', 
     description: 'Creates image descriptions for AI generation',
-    defaultValue: 'Create a professional, LinkedIn-appropriate image description.'
+    defaultValue: `Create an image for this AI tool post. Title: {title}, Content: {body}
+
+IDENTIFY the specific tool and its function. Create a visual concept that represents:
+- The tool's core functionality (code generation, image creation, data analysis, etc.)
+- Abstract tech aesthetics (dark mode UI, glowing elements, data flows)
+- Symbolic representation of what the tool enables
+
+AVOID: Generic office scenes, people at desks, business meetings, stock photo imagery.
+
+Return ONLY a 1-2 sentence image description (max 40 words) specific to this tool.`
   },
 ];
 

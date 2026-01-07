@@ -263,36 +263,44 @@ async function generateHashtags(inputs: Record<string, any>) {
   
   const customPrompt = await getPromptFromSettings('hashtag_system_prompt');
   
-  const defaultPrompt = `You are a LinkedIn SEO and hashtag strategist. Your task is to generate strategic hashtags that maximize post visibility and reach.
+  const defaultPrompt = `You are a LinkedIn hashtag expert. Generate PRECISE, TOOL-SPECIFIC hashtags.
 
 ## Post Content
 Title: ${title}
 Content: ${body}
 
-## Hashtag Strategy
+## CRITICAL INSTRUCTIONS
 
-### Categories to Generate
-1. **Broad/High-Volume Hashtags** (2-3): General hashtags with large followings for maximum reach
-   - Examples: #Leadership, #Innovation, #Technology, #Business
+### Step 1: Extract the EXACT tool/product name
+- Look for proper nouns, product names, or AI tool names in the content
+- Examples: "Cursor", "Claude", "Midjourney", "Notion AI", "GitHub Copilot"
+
+### Step 2: Generate hashtags following this structure
+
+1. **Tool-Specific Hashtag** (1): Create a hashtag using the EXACT tool name
+   - Format: #ToolName or #ToolNameAI
+   - Examples: #CursorAI, #ClaudeAI, #Midjourney, #GitHubCopilot
    
-2. **Niche/Industry-Specific Hashtags** (2-3): Targeted hashtags for your specific industry or topic
-   - More specific = less competition = higher chance of being featured
+2. **Niche Category Hashtags** (2): Specific to what the tool DOES
+   - Focus on the tool's primary function
+   - Examples: #CodeGeneration, #AIWriting, #ImageGeneration, #AIProductivity
    
-3. **Trending/Timely Hashtags** (1-2): Currently popular or emerging hashtags relevant to the content
-   - Can include event-based, seasonal, or trending topic hashtags
+3. **Broad Hashtags** (1-2): General tech/AI categories
+   - Only include 1-2 at most
+   - Examples: #AI, #MachineLearning, #TechTools
 
 ### Rules
-- Include the # symbol with each hashtag
-- Use CamelCase for multi-word hashtags (e.g., #DigitalTransformation)
-- Avoid overly generic hashtags like #business or #success alone
-- Ensure hashtags are actually used on LinkedIn (not Twitter-only trends)
-- Total hashtags should be 5-8 (optimal for LinkedIn engagement)
+- MAXIMUM 5 hashtags total (4-5 is ideal)
+- First hashtag MUST be the tool name
+- Include # symbol with each hashtag
+- Use CamelCase for multi-word hashtags
+- NO generic hashtags like #innovation, #future, #technology alone
 
 ## Output Format
 Return a valid JSON object with:
-- "hashtags_broad": Array of 2-3 high-volume hashtags
-- "hashtags_niche": Array of 2-3 industry-specific hashtags  
-- "hashtags_trending": Array of 1-2 trending relevant hashtags
+- "hashtags_broad": Array of 1-2 broad category hashtags
+- "hashtags_niche": Array of 2-3 specific function hashtags (including the tool name)
+- "hashtags_trending": Array of 0-1 trending hashtags (only if truly relevant)
 
 Return ONLY the JSON object, no additional text.`;
 
@@ -431,31 +439,44 @@ async function generateImageDescription(inputs: Record<string, any>) {
   
   const customPrompt = await getPromptFromSettings('image_generator_prompt');
   
-  const systemPrompt = `You are a visual content strategist specializing in LinkedIn imagery. Your task is to create image descriptions optimized for AI image generation that will complement professional posts.`;
+  const systemPrompt = `You are a visual concept designer for AI tools and technology. Create image descriptions that visually represent the SPECIFIC tool or concept discussed, NOT generic office/workplace scenes.`;
 
-  const defaultUserPrompt = `Create an image description for AI generation based on this LinkedIn post.
+  const defaultUserPrompt = `Create an image description for AI generation based on this LinkedIn post about an AI tool.
 
 ## Post Content
 Title: ${title}
 Content: ${body}
 
-## Image Guidelines
-- Professional and business-appropriate
-- Realistic style suitable for LinkedIn (not cartoonish)
-- Focus on visual metaphors that represent the core message
-- NO text, words, or letters in the image
-- Clean, modern aesthetic
-- Good for professional/business context
+## CRITICAL INSTRUCTIONS
 
-## Style Preferences
-- Photorealistic or high-quality illustration style
-- Professional lighting and composition
-- Colors that evoke trust and professionalism (blues, clean whites, warm accents)
-- Can include: people in professional settings, abstract concepts, technology, nature metaphors
+### Step 1: Identify the Subject
+- What is the SPECIFIC AI tool or concept being discussed?
+- What does this tool DO? (code generation, image creation, data analysis, etc.)
+
+### Step 2: Create a Visual Concept
+Focus on ONE of these approaches:
+1. **Abstract representation** of the tool's function (data flowing, code transforming, creative process)
+2. **Symbolic imagery** representing the problem it solves
+3. **Technical visualization** (UI mockup style, workflow diagram aesthetic, futuristic interface)
+4. **Output representation** (what the tool creates or enables)
+
+## AVOID (DO NOT USE THESE)
+- Generic office environments with people at desks
+- Stock photo style business meetings
+- People pointing at screens
+- Handshakes or corporate imagery
+- Generic "professional" scenes
+
+## PREFER
+- Clean tech aesthetics (dark mode interfaces, glowing elements)
+- Abstract data/code visualizations
+- Futuristic minimalist design
+- Tool-specific iconography or symbols
+- Creative process representations (transformation, generation, flow)
 
 ## Output
-Return ONLY the image description in 1-2 sentences (max 40 words). No explanations or additional text.
-Focus on: subject, setting, style, mood, and key visual elements.`;
+Return ONLY the image description in 1-2 sentences (max 40 words). 
+Make it specific to THIS tool's function. No generic professional imagery.`;
 
   const userPrompt = customPrompt 
     ? interpolatePlaceholders(customPrompt, inputs) 
