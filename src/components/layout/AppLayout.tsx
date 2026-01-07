@@ -14,7 +14,7 @@ export function AppLayout({ children }: AppLayoutProps) {
 
   return (
     <SidebarProvider>
-      <div className={cn("flex min-h-screen w-full bg-background", isRTL && "flex-row-reverse")}>
+      <div className="flex min-h-screen w-full bg-background">
         <AppSidebar />
         <main className="flex-1 overflow-auto">
           <header className={cn(

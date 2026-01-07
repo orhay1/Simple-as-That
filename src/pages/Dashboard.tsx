@@ -8,6 +8,7 @@ import { usePublications } from '@/hooks/usePublications';
 import { useTranslation } from '@/hooks/useTranslation';
 import { useNavigate } from 'react-router-dom';
 import { Sparkles, FileEdit, CheckCircle, Send, ArrowRight } from 'lucide-react';
+import { getContentDirection } from '@/lib/utils';
 
 export default function Dashboard() {
   const { newsItems } = useNewsResearch();
@@ -63,11 +64,13 @@ export default function Dashboard() {
             <CardContent>
               {newsItems.slice(0, 5).map((item) => (
                 <div key={item.id} className="flex items-center justify-between border-b border-border py-3 last:border-0">
-                  <div className="flex-1">
+                  <div className="flex-1" dir={getContentDirection(item.summary || '')}>
                     <p className="font-medium text-foreground">{item.tool_name || item.title}</p>
                     <p className="text-sm text-muted-foreground line-clamp-1">{item.summary}</p>
                   </div>
-                  <Badge variant={item.status === 'used' ? 'default' : 'secondary'}>{item.status}</Badge>
+                  <Badge variant={item.status === 'used' ? 'default' : 'secondary'}>
+                    {item.status === 'used' ? t.topics.used : t.topics.new}
+                  </Badge>
                 </div>
               ))}
               {newsItems.length === 0 && <p className="text-center text-muted-foreground py-8">{t.dashboard.noAITools}</p>}
@@ -86,11 +89,13 @@ export default function Dashboard() {
             <CardContent>
               {drafts.slice(0, 5).map((draft) => (
                 <div key={draft.id} className="flex items-center justify-between border-b border-border py-3 last:border-0">
-                  <div className="flex-1">
+                  <div className="flex-1" dir={getContentDirection(draft.body || '')}>
                     <p className="font-medium text-foreground">{draft.title}</p>
                     <p className="text-sm text-muted-foreground line-clamp-1">{draft.body.substring(0, 60)}...</p>
                   </div>
-                  <Badge variant={draft.status === 'approved' ? 'default' : 'secondary'}>{draft.status}</Badge>
+                  <Badge variant={draft.status === 'approved' ? 'default' : 'secondary'}>
+                    {t.drafts.status[draft.status as keyof typeof t.drafts.status] || draft.status}
+                  </Badge>
                 </div>
               ))}
               {drafts.length === 0 && <p className="text-center text-muted-foreground py-8">{t.dashboard.noDrafts}</p>}
