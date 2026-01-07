@@ -186,8 +186,18 @@ async function generateDraft(inputs: Record<string, any>) {
   
   const customPrompt = await getPromptFromSettings('draft_system_prompt');
   
-  const languageInstruction = language === 'he' 
-    ? '\n\n## LANGUAGE REQUIREMENT\nWrite the ENTIRE post in Hebrew (עברית). Use natural, professional Hebrew suitable for LinkedIn. Do not use English words unless they are technical terms with no common Hebrew equivalent.'
+  const languageNames: Record<string, string> = {
+    'en': 'English',
+    'he': 'Hebrew (עברית)',
+    'es': 'Spanish (Español)',
+    'fr': 'French (Français)',
+    'de': 'German (Deutsch)',
+    'ar': 'Arabic (العربية)',
+  };
+  const langName = languageNames[language] || language;
+  
+  const languageInstruction = language !== 'en' 
+    ? `\n\n## LANGUAGE REQUIREMENT\nWrite the ENTIRE post in ${langName}. Use natural, professional ${langName} suitable for LinkedIn. Keep hashtags in English. Do not use English words unless they are technical terms with no common equivalent in the target language.`
     : '';
   
   const defaultPrompt = `You are a LinkedIn content writer specializing in creating viral, engaging posts that drive meaningful engagement.
@@ -228,7 +238,7 @@ Return a valid JSON object with:
 
 Return ONLY the JSON object, no additional text.`;
 
-  const systemPrompt = `You are a LinkedIn content writer. Create posts in the exact JSON format requested.${language === 'he' ? ' Write the post body entirely in Hebrew.' : ''}`;
+  const systemPrompt = `You are a LinkedIn content writer. Create posts in the exact JSON format requested.${language !== 'en' ? ` Write the post body entirely in ${langName}.` : ''}`;
   const userPrompt = customPrompt 
     ? interpolatePlaceholders(customPrompt, inputs) 
     : defaultPrompt;
@@ -343,8 +353,18 @@ Return ONLY the JSON object, no additional text.`;
 async function rewriteContent(inputs: Record<string, any>) {
   const { body, action, language = 'en' } = inputs;
   
-  const languageInstruction = language === 'he' 
-    ? '\n\n## IMPORTANT: Write the output entirely in Hebrew (עברית). Maintain professional Hebrew suitable for LinkedIn.'
+  const languageNames: Record<string, string> = {
+    'en': 'English',
+    'he': 'Hebrew (עברית)',
+    'es': 'Spanish (Español)',
+    'fr': 'French (Français)',
+    'de': 'German (Deutsch)',
+    'ar': 'Arabic (العربية)',
+  };
+  const langName = languageNames[language] || language;
+  
+  const languageInstruction = language !== 'en' 
+    ? `\n\n## IMPORTANT: Write the output entirely in ${langName}. Maintain professional ${langName} suitable for LinkedIn.`
     : '';
   
   const actionPrompts: Record<string, string> = {
@@ -423,7 +443,7 @@ async function rewriteContent(inputs: Record<string, any>) {
 - Return ONLY the rewritten content
 - Do not include explanations, notes, or meta-commentary
 - Preserve line breaks and formatting style
-- Keep the content appropriate for LinkedIn${language === 'he' ? '\n- Write entirely in Hebrew (עברית)' : ''}`;
+- Keep the content appropriate for LinkedIn${language !== 'en' ? `\n- Write entirely in ${langName}` : ''}`;
 
   const userPrompt = `${actionPrompts[action] || 'Improve this content for LinkedIn engagement.'}\n\n## Original Content\n${body}`;
 
