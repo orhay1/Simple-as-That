@@ -44,22 +44,24 @@ export function VoiceStyleTab() {
           {Object.entries(VOICE_SETTINGS).map(([key, config]) => (
             <div key={key} className="space-y-2">
               <Label htmlFor={key}>{config.label}</Label>
-              <Select
-                value={getVoiceSetting(key)}
-                onValueChange={(value) => handleSaveVoiceSetting(key, value)}
-                disabled={!isAdmin}
-              >
-                <SelectTrigger id={key}>
-                  <SelectValue placeholder={`Select ${config.label.toLowerCase()}`} />
-                </SelectTrigger>
-                <SelectContent>
-                  {config.options.map((option) => (
-                    <SelectItem key={option} value={option}>
-                      {option.charAt(0).toUpperCase() + option.slice(1)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <div dir="ltr">
+                <Select
+                  value={getVoiceSetting(key)}
+                  onValueChange={(value) => handleSaveVoiceSetting(key, value)}
+                  disabled={!isAdmin}
+                >
+                  <SelectTrigger id={key}>
+                    <SelectValue placeholder={`Select ${config.label.toLowerCase()}`} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {config.options.map((option) => (
+                      <SelectItem key={option} value={option}>
+                        {option.charAt(0).toUpperCase() + option.slice(1)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
           ))}
           <div className="space-y-2">

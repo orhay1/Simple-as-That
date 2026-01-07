@@ -28,18 +28,20 @@ export function LanguageTab() {
             <p className="text-sm text-muted-foreground">
               {t.settings.uiLanguageDescription}
             </p>
-            <Select
-              value={uiLanguage}
-              onValueChange={(value) => setUiLanguage(value as Language)}
-            >
-              <SelectTrigger id="ui-language" className="w-full max-w-xs">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="en">{t.settings.english}</SelectItem>
-                <SelectItem value="he">{t.settings.hebrew}</SelectItem>
-              </SelectContent>
-            </Select>
+            <div dir="ltr" className="w-full max-w-xs">
+              <Select
+                value={uiLanguage}
+                onValueChange={(value) => setUiLanguage(value as Language)}
+              >
+                <SelectTrigger id="ui-language">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="en">{t.settings.english}</SelectItem>
+                  <SelectItem value="he">{t.settings.hebrew}</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           {/* Content Language */}
@@ -51,18 +53,20 @@ export function LanguageTab() {
             <p className="text-sm text-muted-foreground">
               {t.settings.contentLanguageDescription}
             </p>
-            <Select
-              value={contentLanguage}
-              onValueChange={(value) => setContentLanguage(value as Language)}
-            >
-              <SelectTrigger id="content-language" className="w-full max-w-xs">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="en">{t.settings.english}</SelectItem>
-                <SelectItem value="he">{t.settings.hebrew}</SelectItem>
-              </SelectContent>
-            </Select>
+            <div dir="ltr" className="w-full max-w-xs">
+              <Select
+                value={contentLanguage}
+                onValueChange={(value) => setContentLanguage(value as Language)}
+              >
+                <SelectTrigger id="content-language">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="en">{t.settings.english}</SelectItem>
+                  <SelectItem value="he">{t.settings.hebrew}</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
         </CardContent>
       </Card>
