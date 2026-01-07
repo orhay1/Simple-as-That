@@ -12,7 +12,11 @@ const DEFAULT_PERPLEXITY_SYSTEM_PROMPT = `You are an expert AI tools researcher.
 OUTPUT FORMAT - Return a JSON array. Each tool must have:
 - title: Tool name + one-line hook (max 60 chars)
 - summary: Brief 2-sentence description of what it does
-- source_url: Official website or GitHub URL
+- source_url: The tool's DIRECT page URL - must be one of:
+  * Official website (e.g., cursor.sh, notion.com)
+  * GitHub repo (e.g., github.com/user/repo)
+  * Direct Taaft tool page: theresanaiforthat.com/ai/{tool-slug}/ (NOT category pages)
+  NEVER use: /s/..., /just-released/, /trending/, or any listing/category pages
 - tool_name: The exact tool/project name
 - tags: 3-5 tags like ["open-source", "llm", "coding", "free"]
 
@@ -45,6 +49,60 @@ STYLE RULES:
 - Include GitHub stars or user count if available
 
 Return ONLY the summary text. No headers, no formatting, no quotes.`;
+
+// Validate and fix Taaft URLs that point to category pages instead of direct tool pages
+function validateAndFixSourceUrl(url: string, toolName: string): string {
+  if (!url) return url;
+  
+  // Detect Taaft category/listing URLs that need fixing
+  const taaftBadPatterns = [
+    /theresanaiforthat\.com\/s\//,
+    /theresanaiforthat\.com\/just-released/,
+    /theresanaiforthat\.com\/trending/,
+    /theresanaiforthat\.com\/?\?/,
+    /theresanaiforthat\.com\/?$/,
+  ];
+  
+  for (const pattern of taaftBadPatterns) {
+    if (pattern.test(url)) {
+      // Generate the correct tool URL from the tool name
+      const slug = toolName
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '');
+      console.log(`Fixed bad Taaft URL: ${url} -> https://theresanaiforthat.com/ai/${slug}/`);
+      return `https://theresanaiforthat.com/ai/${slug}/`;
+    }
+  }
+  
+  return url;
+}
+
+// Extract official tool URL from Firecrawl scraped content
+function extractOfficialUrl(content: string, sourceUrl: string): string | null {
+  if (!content || !sourceUrl.includes('theresanaiforthat.com')) return null;
+  
+  // Look for "Visit" links in the markdown content
+  const visitPatterns = [
+    /\[Visit[^\]]*\]\((https?:\/\/[^)]+)\)/i,
+    /\[Go to[^\]]*\]\((https?:\/\/[^)]+)\)/i,
+    /\[Official[^\]]*\]\((https?:\/\/[^)]+)\)/i,
+    /\[Website[^\]]*\]\((https?:\/\/[^)]+)\)/i,
+  ];
+  
+  for (const pattern of visitPatterns) {
+    const match = content.match(pattern);
+    if (match && match[1]) {
+      // Filter out internal taaft links
+      if (!match[1].includes('theresanaiforthat.com')) {
+        console.log(`Extracted official URL: ${match[1]}`);
+        return match[1];
+      }
+    }
+  }
+  
+  return null;
+}
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -210,10 +268,14 @@ serve(async (req) => {
         polished_summary: null,
       };
 
+      // Validate and fix source URL (especially for Taaft category pages)
+      const toolName = item.tool_name || item.title || '';
+      enrichedItem.source_url = validateAndFixSourceUrl(enrichedItem.source_url || item.source_url, toolName);
+
       // Only scrape if we have Firecrawl key and a source URL
-      if (item.source_url && firecrawlKey) {
+      if (enrichedItem.source_url && firecrawlKey) {
         try {
-          console.log(`Fetching additional info from: ${item.source_url}`);
+          console.log(`Fetching additional info from: ${enrichedItem.source_url}`);
           const firecrawlResponse = await fetch('https://api.firecrawl.dev/v1/scrape', {
             method: 'POST',
             headers: {
@@ -221,7 +283,7 @@ serve(async (req) => {
               'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-              url: item.source_url,
+              url: enrichedItem.source_url,
               formats: ['markdown'],
               onlyMainContent: true,
             }),
@@ -234,11 +296,17 @@ serve(async (req) => {
             // Clean and limit the content
             if (rawContent) {
               enrichedItem.full_content = rawContent.substring(0, 2000);
+              
+              // Extract official tool URL from Taaft pages
+              const officialUrl = extractOfficialUrl(rawContent, enrichedItem.source_url || '');
+              if (officialUrl) {
+                enrichedItem.official_url = officialUrl;
+              }
             }
             enrichedItem.raw_firecrawl_response = firecrawlData;
             console.log(`Successfully fetched content for: ${item.title}`);
           } else {
-            console.warn(`Firecrawl failed for ${item.source_url}: ${firecrawlResponse.status}`);
+            console.warn(`Firecrawl failed for ${enrichedItem.source_url}: ${firecrawlResponse.status}`);
           }
         } catch (scrapeError) {
           console.warn(`Error fetching ${item.source_url}:`, scrapeError);
@@ -298,6 +366,7 @@ serve(async (req) => {
       summary: item.polished_summary || (typeof item.summary === 'object' ? JSON.stringify(item.summary) : item.summary) || null,
       full_content: item.full_content || null,
       source_url: item.source_url || null,
+      official_url: item.official_url || null,
       source_name: item.source_name || null,
       tool_name: item.tool_name || null,
       tags: Array.isArray(item.tags) ? item.tags : [],
