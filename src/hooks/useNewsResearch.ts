@@ -9,6 +9,7 @@ export interface NewsItem {
   summary: string | null;
   full_content: string | null;
   source_url: string | null;
+  official_url: string | null;
   source_name: string | null;
   tool_name: string | null;
   published_date: string | null;

@@ -20,6 +20,7 @@ export type Database = {
           discovered_at: string | null
           full_content: string | null
           id: string
+          official_url: string | null
           published_date: string | null
           raw_firecrawl_response: Json | null
           raw_perplexity_response: Json | null
@@ -36,6 +37,7 @@ export type Database = {
           discovered_at?: string | null
           full_content?: string | null
           id?: string
+          official_url?: string | null
           published_date?: string | null
           raw_firecrawl_response?: Json | null
           raw_perplexity_response?: Json | null
@@ -52,6 +54,7 @@ export type Database = {
           discovered_at?: string | null
           full_content?: string | null
           id?: string
+          official_url?: string | null
           published_date?: string | null
           raw_firecrawl_response?: Json | null
           raw_perplexity_response?: Json | null

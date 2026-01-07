@@ -300,6 +300,16 @@ export default function Topics() {
                 )}
 
                 <div className="flex gap-2 pt-4 border-t">
+                  {selectedItem.official_url && (
+                    <Button
+                      variant="default"
+                      size="sm"
+                      onClick={() => window.open(selectedItem.official_url!, '_blank')}
+                    >
+                      <ExternalLink className="h-4 w-4 mr-1" />
+                      Visit Tool
+                    </Button>
+                  )}
                   {selectedItem.source_url && (
                     <Button
                       variant="outline"
@@ -307,11 +317,12 @@ export default function Topics() {
                       onClick={() => window.open(selectedItem.source_url!, '_blank')}
                     >
                       <ExternalLink className="h-4 w-4 mr-1" />
-                      View Source
+                      {selectedItem.official_url ? 'View Source' : 'Visit Tool'}
                     </Button>
                   )}
                   <Button
                     size="sm"
+                    variant={selectedItem.official_url || selectedItem.source_url ? 'outline' : 'default'}
                     onClick={() => {
                       handleCreateDraftFromNews(selectedItem);
                       setSelectedItem(null);
@@ -414,12 +425,24 @@ function NewsCard({ item, isExpanded, isSelected, onToggleSelect, onToggleExpand
 
         <div className="flex items-center justify-between pt-2 border-t">
           <div className="flex gap-1">
-            {item.source_url && (
+            {item.official_url && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 px-2"
+                onClick={() => window.open(item.official_url!, '_blank')}
+                title="Visit Tool"
+              >
+                <ExternalLink className="h-3.5 w-3.5" />
+              </Button>
+            )}
+            {item.source_url && !item.official_url && (
               <Button
                 variant="ghost"
                 size="sm"
                 className="h-8 px-2"
                 onClick={() => window.open(item.source_url!, '_blank')}
+                title="View Source"
               >
                 <ExternalLink className="h-3.5 w-3.5" />
               </Button>

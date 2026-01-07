@@ -77,7 +77,11 @@ export const DEFAULT_PERPLEXITY_SYSTEM_PROMPT = `You are an expert AI tools rese
 OUTPUT FORMAT - Return a JSON array. Each tool must have:
 - title: Tool name + one-line hook (max 60 chars)
 - summary: Brief 2-sentence description of what it does
-- source_url: Official website or GitHub URL
+- source_url: The tool's DIRECT page URL - must be one of:
+  * Official website (e.g., cursor.sh, notion.com)
+  * GitHub repo (e.g., github.com/user/repo)
+  * Direct Taaft tool page: theresanaiforthat.com/ai/{tool-slug}/ (NOT category pages)
+  NEVER use: /s/..., /just-released/, /trending/, or any listing/category pages
 - tool_name: The exact tool/project name
 - tags: 3-5 tags like ["open-source", "llm", "coding", "free"]
 
