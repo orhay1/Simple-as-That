@@ -182,9 +182,13 @@ Return ONLY the JSON array, no additional text or explanation.`;
 }
 
 async function generateDraft(inputs: Record<string, any>) {
-  const { topic_id, title, hook, rationale } = inputs;
+  const { topic_id, title, hook, rationale, language = 'en' } = inputs;
   
   const customPrompt = await getPromptFromSettings('draft_system_prompt');
+  
+  const languageInstruction = language === 'he' 
+    ? '\n\n## LANGUAGE REQUIREMENT\nWrite the ENTIRE post in Hebrew (עברית). Use natural, professional Hebrew suitable for LinkedIn. Do not use English words unless they are technical terms with no common Hebrew equivalent.'
+    : '';
   
   const defaultPrompt = `You are a LinkedIn content writer specializing in creating viral, engaging posts that drive meaningful engagement.
 
@@ -209,6 +213,7 @@ async function generateDraft(inputs: Record<string, any>) {
 - Avoid corporate jargon and buzzwords
 - Use "you" and "I" to create connection
 - Keep between 150-250 words
+${languageInstruction}
 
 ### Engagement Techniques
 - Use pattern interrupts
@@ -219,11 +224,11 @@ async function generateDraft(inputs: Record<string, any>) {
 ## Output Format
 Return a valid JSON object with:
 - "body": The complete LinkedIn post content (with proper line breaks using \\n)
-- "image_description": A brief description for AI image generation (max 30 words, visual concept only)
+- "image_description": A brief description for AI image generation (max 30 words, visual concept only, always in English)
 
 Return ONLY the JSON object, no additional text.`;
 
-  const systemPrompt = 'You are a LinkedIn content writer. Create posts in the exact JSON format requested.';
+  const systemPrompt = `You are a LinkedIn content writer. Create posts in the exact JSON format requested.${language === 'he' ? ' Write the post body entirely in Hebrew.' : ''}`;
   const userPrompt = customPrompt 
     ? interpolatePlaceholders(customPrompt, inputs) 
     : defaultPrompt;

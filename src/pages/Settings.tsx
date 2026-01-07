@@ -50,7 +50,7 @@ export default function Settings() {
         </div>
         
         <Tabs value={tabFromUrl} onValueChange={handleTabChange} className="space-y-4">
-          <TabsList className="grid w-full grid-cols-6 lg:w-auto lg:inline-grid">
+          <TabsList className="grid w-full grid-cols-6 lg:w-auto lg:inline-grid" dir="ltr">
             <TabsTrigger value="linkedin" className="gap-2">
               <Linkedin className="h-4 w-4" />
               <span className="hidden sm:inline">{t.settings.linkedin}</span>

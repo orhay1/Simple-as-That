@@ -27,6 +27,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTranslation } from '@/hooks/useTranslation';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { cn } from '@/lib/utils';
 
 const mainMenuItems = [
@@ -51,11 +52,12 @@ export const AppSidebar = React.forwardRef<
   const location = useLocation();
   const { signOut, userRole } = useAuth();
   const { t } = useTranslation();
+  const { isRTL } = useLanguage();
 
   const isActive = (path: string) => location.pathname === path;
 
   return (
-    <Sidebar ref={ref} className={cn(collapsed ? 'w-16' : 'w-64', 'transition-all duration-200')} {...props}>
+    <Sidebar ref={ref} side={isRTL ? 'right' : 'left'} className={cn(collapsed ? 'w-16' : 'w-64', 'transition-all duration-200')} {...props}>
       <SidebarHeader className="border-b border-sidebar-border p-4">
         <div className="flex items-center gap-3">
           <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground">
