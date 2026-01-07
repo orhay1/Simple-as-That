@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Copy, Trash2, ExternalLink, Sparkles, Download } from 'lucide-react';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
+import { useTranslation } from '@/hooks/useTranslation';
 
 interface AssetDetailDialogProps {
   asset: Asset | null;
@@ -19,22 +20,24 @@ const isValidUrl = (url: string | null | undefined): boolean => {
 };
 
 export function AssetDetailDialog({ asset, open, onOpenChange, onDelete }: AssetDetailDialogProps) {
+  const { t } = useTranslation();
+  
   if (!asset) return null;
 
   const validUrl = isValidUrl(asset.file_url);
 
   const handleCopyUrl = () => {
     if (!validUrl) {
-      toast.error('Invalid image URL - please regenerate this image');
+      toast.error(t.assetDetail.invalidUrl);
       return;
     }
     navigator.clipboard.writeText(asset.file_url!);
-    toast.success('URL copied to clipboard');
+    toast.success(t.assetDetail.urlCopied);
   };
 
   const handleDownload = async () => {
     if (!validUrl) {
-      toast.error('Cannot download - invalid image URL');
+      toast.error(t.assetDetail.downloadFailed);
       return;
     }
     try {
@@ -48,9 +51,9 @@ export function AssetDetailDialog({ asset, open, onOpenChange, onDelete }: Asset
       a.click();
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
-      toast.success('Download started');
+      toast.success(t.assetDetail.downloadStarted);
     } catch {
-      toast.error('Failed to download image');
+      toast.error(t.assetDetail.downloadFailed);
     }
   };
 
@@ -66,10 +69,10 @@ export function AssetDetailDialog({ asset, open, onOpenChange, onDelete }: Asset
       <DialogContent className="sm:max-w-[800px]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            Asset Details
+            {t.assetDetail.title}
             {asset.is_ai_generated && (
               <Badge variant="secondary">
-                <Sparkles className="mr-1 h-3 w-3" /> AI Generated
+                <Sparkles className="mr-1 h-3 w-3" /> {t.assets.aiGenerated}
               </Badge>
             )}
           </DialogTitle>
@@ -86,7 +89,7 @@ export function AssetDetailDialog({ asset, open, onOpenChange, onDelete }: Asset
               />
             ) : (
               <div className="w-full h-48 flex items-center justify-center text-muted-foreground">
-                No image available
+                {t.assetDetail.noImage}
               </div>
             )}
           </div>
@@ -94,7 +97,7 @@ export function AssetDetailDialog({ asset, open, onOpenChange, onDelete }: Asset
           {/* Prompt */}
           {asset.prompt && (
             <div className="space-y-1">
-              <label className="text-sm font-medium text-muted-foreground">Prompt</label>
+              <label className="text-sm font-medium text-muted-foreground">{t.assetDetail.prompt}</label>
               <p className="text-sm text-foreground">{asset.prompt}</p>
             </div>
           )}
@@ -102,18 +105,18 @@ export function AssetDetailDialog({ asset, open, onOpenChange, onDelete }: Asset
           {/* Metadata */}
           <div className="grid grid-cols-2 gap-4 text-sm">
             <div>
-              <label className="text-muted-foreground">Created</label>
+              <label className="text-muted-foreground">{t.assetDetail.created}</label>
               <p className="text-foreground">{format(new Date(asset.created_at), 'PPpp')}</p>
             </div>
             {metadata?.model && (
               <div>
-                <label className="text-muted-foreground">Model</label>
+                <label className="text-muted-foreground">{t.assetDetail.model}</label>
                 <p className="text-foreground">{String(metadata.model)}</p>
               </div>
             )}
             {metadata?.size && (
               <div>
-                <label className="text-muted-foreground">Size</label>
+                <label className="text-muted-foreground">{t.assetDetail.size}</label>
                 <p className="text-foreground">{String(metadata.size)}</p>
               </div>
             )}
@@ -122,18 +125,18 @@ export function AssetDetailDialog({ asset, open, onOpenChange, onDelete }: Asset
           {/* Actions */}
           <div className="flex gap-2 pt-4 border-t border-border">
             <Button variant="outline" size="sm" onClick={handleCopyUrl}>
-              <Copy className="mr-2 h-4 w-4" /> Copy URL
+              <Copy className="mr-2 h-4 w-4" /> {t.assetDetail.copyUrl}
             </Button>
             <Button variant="outline" size="sm" onClick={handleDownload}>
-              <Download className="mr-2 h-4 w-4" /> Download
+              <Download className="mr-2 h-4 w-4" /> {t.common.download}
             </Button>
             {validUrl && (
               <Button variant="outline" size="sm" onClick={() => window.open(asset.file_url!, '_blank')}>
-                <ExternalLink className="mr-2 h-4 w-4" /> Open
+                <ExternalLink className="mr-2 h-4 w-4" /> {t.common.open}
               </Button>
             )}
             <Button variant="destructive" size="sm" onClick={handleDelete} className="ml-auto">
-              <Trash2 className="mr-2 h-4 w-4" /> Delete
+              <Trash2 className="mr-2 h-4 w-4" /> {t.common.delete}
             </Button>
           </div>
         </div>

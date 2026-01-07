@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
+import { useTranslation } from '@/hooks/useTranslation';
 
 interface ResearchDialogProps {
   open: boolean;
@@ -21,6 +22,7 @@ interface ResearchDialogProps {
 }
 
 export function ResearchDialog({ open, onOpenChange, onResearch, isResearching }: ResearchDialogProps) {
+  const { t } = useTranslation();
   const [query, setQuery] = useState('');
   const [resultCount, setResultCount] = useState(5);
 
@@ -29,6 +31,7 @@ export function ResearchDialog({ open, onOpenChange, onResearch, isResearching }
     onResearch(query || undefined, resultCount);
   };
 
+  // Preset queries stay in English as they are search terms
   const presetQueries = [
     'GitHub trending AI tools and repos',
     'New AI tools on Taaft this week',
@@ -43,17 +46,16 @@ export function ResearchDialog({ open, onOpenChange, onResearch, isResearching }
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Search className="h-5 w-5" />
-            Research AI Tools
+            {t.research.title}
           </DialogTitle>
           <DialogDescription>
-            Search for the latest practical AI tools from GitHub, Taaft, and other sources.
-            Results will be summarized for easy LinkedIn post creation.
+            {t.research.description}
           </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="query">Search Query (optional)</Label>
+            <Label htmlFor="query">{t.research.searchQuery}</Label>
             <Input
               id="query"
               placeholder="e.g., AI tools for video editing..."
@@ -64,7 +66,7 @@ export function ResearchDialog({ open, onOpenChange, onResearch, isResearching }
           </div>
 
           <div className="space-y-2">
-            <Label className="text-xs text-muted-foreground">Quick picks</Label>
+            <Label className="text-xs text-muted-foreground">{t.research.quickPicks}</Label>
             <div className="flex flex-wrap gap-1.5">
               {presetQueries.map((preset, i) => (
                 <Button
@@ -84,7 +86,7 @@ export function ResearchDialog({ open, onOpenChange, onResearch, isResearching }
 
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <Label>Number of results</Label>
+              <Label>{t.research.numberOfResults}</Label>
               <span className="text-sm font-medium text-muted-foreground">{resultCount}</span>
             </div>
             <Slider
@@ -104,18 +106,18 @@ export function ResearchDialog({ open, onOpenChange, onResearch, isResearching }
 
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isResearching}>
-              Cancel
+              {t.common.cancel}
             </Button>
             <Button type="submit" disabled={isResearching}>
               {isResearching ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Researching...
+                  {t.research.searching}
                 </>
               ) : (
                 <>
                   <Search className="h-4 w-4 mr-2" />
-                  Search
+                  {t.common.search}
                 </>
               )}
             </Button>

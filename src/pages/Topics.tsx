@@ -11,8 +11,10 @@ import { useNavigate } from 'react-router-dom';
 import { Sparkles, Star, Archive, FileEdit, Trash2, Loader2, Search, Newspaper, ExternalLink, ChevronDown, ChevronUp, CheckSquare, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { ResearchDialog } from '@/components/topics/ResearchDialog';
+import { useTranslation } from '@/hooks/useTranslation';
 
 export default function Topics() {
+  const { t } = useTranslation();
   const { createDraft } = useDrafts();
   const { newsItems, researchNews, updateStatus, deleteNewsItem, isResearching, researchStatus } = useNewsResearch();
   const navigate = useNavigate();
@@ -33,7 +35,7 @@ export default function Topics() {
       source_url: item.source_url || undefined,
     });
     updateStatus.mutate({ id: item.id, status: 'used' });
-    toast.success('Draft created from AI news');
+    toast.success(t.drafts.status.draft + ' ' + t.common.success.toLowerCase());
     navigate('/drafts');
   };
 
@@ -79,7 +81,7 @@ export default function Topics() {
     selectedIds.forEach(id => {
       deleteNewsItem.mutate(id);
     });
-    toast.success(`Deleted ${selectedIds.size} items`);
+    toast.success(`${t.common.delete} ${selectedIds.size}`);
     clearSelection();
   };
 
@@ -97,7 +99,7 @@ export default function Topics() {
       updateStatus.mutate({ id: item.id, status: 'used' });
     });
     
-    toast.success(`Created ${itemsToConvert.length} drafts`);
+    toast.success(`${itemsToConvert.length} ${t.navigation.drafts.toLowerCase()}`);
     clearSelection();
     navigate('/drafts');
   };
@@ -113,19 +115,19 @@ export default function Topics() {
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-foreground">AI Tools Research</h1>
-            <p className="text-muted-foreground">Discover and curate AI tools for LinkedIn posts</p>
+            <h1 className="text-3xl font-bold text-foreground">{t.topics.title}</h1>
+            <p className="text-muted-foreground">{t.topics.subtitle}</p>
           </div>
           <Button onClick={() => setResearchDialogOpen(true)} disabled={isResearching}>
             {isResearching ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                {researchStatus || 'Researching...'}
+                {researchStatus || t.research.searching}
               </>
             ) : (
               <>
                 <Search className="mr-2 h-4 w-4" />
-                Research AI Tools
+                {t.topics.researchAITools}
               </>
             )}
           </Button>
@@ -134,13 +136,13 @@ export default function Topics() {
         {groupedNews.new.length === 0 && groupedNews.used.length === 0 && groupedNews.dismissed.length === 0 ? (
           <div className="text-center py-12">
             <Newspaper className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-            <h3 className="text-lg font-medium mb-2">No AI tools discovered yet</h3>
+            <h3 className="text-lg font-medium mb-2">{t.topics.noToolsYet}</h3>
             <p className="text-muted-foreground mb-4">
-              Click "Research AI Tools" to discover the latest AI tools from GitHub, Taaft, and more
+              {t.topics.discoverDescription}
             </p>
             <Button onClick={() => setResearchDialogOpen(true)} disabled={isResearching}>
               {isResearching ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Search className="mr-2 h-4 w-4" />}
-              Start Research
+              {t.topics.startResearch}
             </Button>
           </div>
         ) : (
@@ -150,20 +152,20 @@ export default function Topics() {
               <div className="sticky top-0 z-10 flex items-center justify-between gap-4 p-3 bg-primary/10 border border-primary/20 rounded-lg">
                 <div className="flex items-center gap-2">
                   <CheckSquare className="h-4 w-4 text-primary" />
-                  <span className="font-medium">{selectedIds.size} selected</span>
+                  <span className="font-medium">{selectedIds.size} {t.topics.selected}</span>
                   <Button variant="ghost" size="sm" className="h-7 px-2" onClick={clearSelection}>
                     <X className="h-3 w-3 mr-1" />
-                    Clear
+                    {t.topics.clear}
                   </Button>
                 </div>
                 <div className="flex gap-2">
                   <Button variant="outline" size="sm" onClick={handleBatchDelete}>
                     <Trash2 className="h-4 w-4 mr-1" />
-                    Delete ({selectedIds.size})
+                    {t.common.delete} ({selectedIds.size})
                   </Button>
                   <Button size="sm" onClick={handleBatchToDraft}>
                     <FileEdit className="h-4 w-4 mr-1" />
-                    To Drafts ({selectedIds.size})
+                    {t.topics.toDrafts} ({selectedIds.size})
                   </Button>
                 </div>
               </div>
@@ -174,10 +176,10 @@ export default function Topics() {
                 <div className="mb-4 flex items-center justify-between">
                   <h2 className="text-lg font-semibold flex items-center gap-2">
                     <Sparkles className="h-5 w-5" />
-                    New ({groupedNews.new.length})
+                    {t.topics.new} ({groupedNews.new.length})
                   </h2>
                   <Button variant="ghost" size="sm" onClick={() => selectAll(groupedNews.new)}>
-                    Select All
+                    {t.topics.selectAll}
                   </Button>
                 </div>
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -192,6 +194,7 @@ export default function Topics() {
                       onCreateDraft={() => handleCreateDraftFromNews(item)}
                       onViewDetails={() => setSelectedItem(item)}
                       onDelete={() => deleteNewsItem.mutate(item.id)}
+                      t={t}
                     />
                   ))}
                 </div>
@@ -203,10 +206,10 @@ export default function Topics() {
                 <div className="mb-4 flex items-center justify-between">
                   <h2 className="text-lg font-semibold flex items-center gap-2 text-muted-foreground">
                     <Star className="h-5 w-5" />
-                    Used ({groupedNews.used.length})
+                    {t.topics.used} ({groupedNews.used.length})
                   </h2>
                   <Button variant="ghost" size="sm" onClick={() => selectAll(groupedNews.used)}>
-                    Select All
+                    {t.topics.selectAll}
                   </Button>
                 </div>
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -221,6 +224,7 @@ export default function Topics() {
                       onCreateDraft={() => handleCreateDraftFromNews(item)}
                       onViewDetails={() => setSelectedItem(item)}
                       onDelete={() => deleteNewsItem.mutate(item.id)}
+                      t={t}
                     />
                   ))}
                 </div>
@@ -232,10 +236,10 @@ export default function Topics() {
                 <div className="mb-4 flex items-center justify-between">
                   <h2 className="text-lg font-semibold flex items-center gap-2 text-muted-foreground">
                     <Archive className="h-5 w-5" />
-                    Archived ({groupedNews.dismissed.length})
+                    {t.topics.archived} ({groupedNews.dismissed.length})
                   </h2>
                   <Button variant="ghost" size="sm" onClick={() => selectAll(groupedNews.dismissed)}>
-                    Select All
+                    {t.topics.selectAll}
                   </Button>
                 </div>
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 opacity-60">
@@ -250,6 +254,7 @@ export default function Topics() {
                       onCreateDraft={() => handleCreateDraftFromNews(item)}
                       onViewDetails={() => setSelectedItem(item)}
                       onDelete={() => deleteNewsItem.mutate(item.id)}
+                      t={t}
                     />
                   ))}
                 </div>
@@ -278,13 +283,13 @@ export default function Topics() {
                 )}
                 
                 <div className="space-y-2">
-                  <h4 className="font-medium">Summary</h4>
+                  <h4 className="font-medium">{t.topics.summary}</h4>
                   <p className="text-muted-foreground">{selectedItem.summary}</p>
                 </div>
 
                 {selectedItem.full_content && (
                   <div className="space-y-2">
-                    <h4 className="font-medium">Full Content</h4>
+                    <h4 className="font-medium">{t.topics.fullContent}</h4>
                     <div className="text-sm text-muted-foreground whitespace-pre-wrap max-h-96 overflow-y-auto bg-muted/50 p-4 rounded-lg">
                       {selectedItem.full_content}
                     </div>
@@ -307,7 +312,7 @@ export default function Topics() {
                       onClick={() => window.open(selectedItem.official_url!, '_blank')}
                     >
                       <ExternalLink className="h-4 w-4 mr-1" />
-                      Visit Tool
+                      {t.topics.visitTool}
                     </Button>
                   )}
                   {selectedItem.source_url && (
@@ -317,7 +322,7 @@ export default function Topics() {
                       onClick={() => window.open(selectedItem.source_url!, '_blank')}
                     >
                       <ExternalLink className="h-4 w-4 mr-1" />
-                      {selectedItem.official_url ? 'View Source' : 'Visit Tool'}
+                      {selectedItem.official_url ? t.topics.viewSource : t.topics.visitTool}
                     </Button>
                   )}
                   <Button
@@ -329,7 +334,7 @@ export default function Topics() {
                     }}
                   >
                     <FileEdit className="h-4 w-4 mr-1" />
-                    Create Draft
+                    {t.topics.createDraft}
                   </Button>
                 </div>
               </div>
@@ -350,13 +355,20 @@ interface NewsCardProps {
   onCreateDraft: () => void;
   onViewDetails: () => void;
   onDelete: () => void;
+  t: ReturnType<typeof useTranslation>['t'];
 }
 
-function NewsCard({ item, isExpanded, isSelected, onToggleSelect, onToggleExpand, onCreateDraft, onViewDetails, onDelete }: NewsCardProps) {
+function NewsCard({ item, isExpanded, isSelected, onToggleSelect, onToggleExpand, onCreateDraft, onViewDetails, onDelete, t }: NewsCardProps) {
   const statusColors: Record<string, string> = {
     new: 'bg-primary/10 text-primary',
     used: 'bg-green-500/10 text-green-500',
     dismissed: 'bg-muted text-muted-foreground',
+  };
+
+  const statusLabels: Record<string, string> = {
+    new: t.topics.new,
+    used: t.topics.used,
+    dismissed: t.topics.archived,
   };
 
   return (
@@ -380,7 +392,7 @@ function NewsCard({ item, isExpanded, isSelected, onToggleSelect, onToggleExpand
               )}
             </div>
             <Badge className={statusColors[item.status] || statusColors.new}>
-              {item.status}
+              {statusLabels[item.status] || item.status}
             </Badge>
           </div>
         </div>
@@ -402,12 +414,12 @@ function NewsCard({ item, isExpanded, isSelected, onToggleSelect, onToggleExpand
             {isExpanded ? (
               <>
                 <ChevronUp className="h-3 w-3 mr-1" />
-                Show less
+                {t.topics.showLess}
               </>
             ) : (
               <>
                 <ChevronDown className="h-3 w-3 mr-1" />
-                Show more
+                {t.topics.showMore}
               </>
             )}
           </Button>
@@ -431,7 +443,7 @@ function NewsCard({ item, isExpanded, isSelected, onToggleSelect, onToggleExpand
                 size="sm"
                 className="h-8 px-2"
                 onClick={() => window.open(item.official_url!, '_blank')}
-                title="Visit Tool"
+                title={t.topics.visitTool}
               >
                 <ExternalLink className="h-3.5 w-3.5" />
               </Button>
@@ -442,7 +454,7 @@ function NewsCard({ item, isExpanded, isSelected, onToggleSelect, onToggleExpand
                 size="sm"
                 className="h-8 px-2"
                 onClick={() => window.open(item.source_url!, '_blank')}
-                title="View Source"
+                title={t.topics.viewSource}
               >
                 <ExternalLink className="h-3.5 w-3.5" />
               </Button>
@@ -461,18 +473,18 @@ function NewsCard({ item, isExpanded, isSelected, onToggleSelect, onToggleExpand
             <Button
               variant="outline"
               size="sm"
-              className="h-8"
+              className="h-8 px-2 text-xs"
               onClick={onViewDetails}
             >
-              View Details
+              {t.common.view}
             </Button>
             <Button
               size="sm"
-              className="h-8"
+              className="h-8 px-2 text-xs"
               onClick={onCreateDraft}
             >
-              <FileEdit className="h-3.5 w-3.5 mr-1" />
-              To Draft
+              <FileEdit className="h-3 w-3 mr-1" />
+              {t.topics.createDraft}
             </Button>
           </div>
         </div>
