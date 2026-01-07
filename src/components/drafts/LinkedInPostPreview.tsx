@@ -1,4 +1,5 @@
 import { Loader2 } from 'lucide-react';
+import { Language } from '@/lib/i18n/translations';
 
 interface LinkedInPostPreviewProps {
   profileName?: string;
@@ -9,6 +10,7 @@ interface LinkedInPostPreviewProps {
   imageUrl?: string;
   imageDescription?: string;
   isGeneratingImage?: boolean;
+  language?: Language;
 }
 
 export function LinkedInPostPreview({
@@ -20,10 +22,12 @@ export function LinkedInPostPreview({
   imageUrl,
   imageDescription,
   isGeneratingImage,
+  language = 'en',
 }: LinkedInPostPreviewProps) {
   const characterCount = body.length;
   const maxCharacters = 3000;
   const isOverLimit = characterCount > maxCharacters;
+  const isRTL = language === 'he';
 
   // Format hashtags as LinkedIn displays them
   const formattedHashtags = hashtags
@@ -109,6 +113,8 @@ export function LinkedInPostPreview({
       lineHeight: '20px',
       whiteSpace: 'pre-wrap' as const,
       margin: 0,
+      direction: isRTL ? 'rtl' as const : 'ltr' as const,
+      textAlign: isRTL ? 'right' as const : 'left' as const,
     },
     placeholder: {
       fontSize: '14px',

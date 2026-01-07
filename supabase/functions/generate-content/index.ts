@@ -336,7 +336,11 @@ Return ONLY the JSON object, no additional text.`;
 }
 
 async function rewriteContent(inputs: Record<string, any>) {
-  const { body, action } = inputs;
+  const { body, action, language = 'en' } = inputs;
+  
+  const languageInstruction = language === 'he' 
+    ? '\n\n## IMPORTANT: Write the output entirely in Hebrew (עברית). Maintain professional Hebrew suitable for LinkedIn.'
+    : '';
   
   const actionPrompts: Record<string, string> = {
     tighten: `Rewrite this content to be more concise and impactful.
@@ -346,7 +350,7 @@ async function rewriteContent(inputs: Record<string, any>) {
 - Keep the core message and key points intact
 - Maintain the original tone and voice
 - Aim for 20-30% shorter while increasing clarity
-- Preserve any specific examples or data points`,
+- Preserve any specific examples or data points${languageInstruction}`,
 
     expand: `Expand this content with more depth and detail.
 
@@ -356,7 +360,7 @@ async function rewriteContent(inputs: Record<string, any>) {
 - Break down complex points into digestible pieces
 - Add a specific tip or actionable insight
 - Keep the same tone and voice
-- Aim for 30-50% longer without being verbose`,
+- Aim for 30-50% longer without being verbose${languageInstruction}`,
 
     add_cta: `Add a compelling call-to-action to this content.
 
@@ -365,7 +369,7 @@ async function rewriteContent(inputs: Record<string, any>) {
 - Make it feel natural, not salesy or forced
 - Encourage comments and discussion
 - Options: ask for opinions, invite sharing experiences, prompt reflection
-- Keep the CTA to 1-2 lines maximum`,
+- Keep the CTA to 1-2 lines maximum${languageInstruction}`,
 
     founder_tone: `Rewrite this in an authentic founder/entrepreneur voice.
 
@@ -375,7 +379,7 @@ async function rewriteContent(inputs: Record<string, any>) {
 - Be direct and decisive, not hedging
 - Use "I" statements and personal observations
 - Sound visionary but grounded
-- Maintain professionalism while being relatable`,
+- Maintain professionalism while being relatable${languageInstruction}`,
 
     educational_tone: `Rewrite this in an educational, teaching tone.
 
@@ -385,7 +389,7 @@ async function rewriteContent(inputs: Record<string, any>) {
 - Include actionable takeaways
 - Break down complex concepts simply
 - Be helpful and approachable
-- Sound knowledgeable but not condescending`,
+- Sound knowledgeable but not condescending${languageInstruction}`,
 
     contrarian_tone: `Rewrite this with a contrarian, thought-provoking angle.
 
@@ -395,7 +399,7 @@ async function rewriteContent(inputs: Record<string, any>) {
 - Back up the contrarian view with reasoning
 - Be bold but not offensive
 - Create productive tension that invites discussion
-- Avoid being contrarian just for shock value`,
+- Avoid being contrarian just for shock value${languageInstruction}`,
 
     story_tone: `Rewrite this as a narrative story.
 
@@ -405,7 +409,7 @@ async function rewriteContent(inputs: Record<string, any>) {
 - Show the journey from problem to insight
 - Include dialogue or internal thoughts if appropriate
 - End with the lesson or takeaway
-- Make it relatable and human`,
+- Make it relatable and human${languageInstruction}`,
   };
 
   const systemPrompt = `You are a LinkedIn content editor and writing coach. Your task is to rewrite content according to specific instructions while maintaining the core message.
@@ -414,7 +418,7 @@ async function rewriteContent(inputs: Record<string, any>) {
 - Return ONLY the rewritten content
 - Do not include explanations, notes, or meta-commentary
 - Preserve line breaks and formatting style
-- Keep the content appropriate for LinkedIn`;
+- Keep the content appropriate for LinkedIn${language === 'he' ? '\n- Write entirely in Hebrew (עברית)' : ''}`;
 
   const userPrompt = `${actionPrompts[action] || 'Improve this content for LinkedIn engagement.'}\n\n## Original Content\n${body}`;
 
