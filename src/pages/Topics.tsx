@@ -314,7 +314,6 @@ export default function Topics() {
                       handleCreateDraftFromNews(selectedItem);
                       setSelectedItem(null);
                     }}
-                    disabled={selectedItem.status === 'used'}
                   >
                     <FileEdit className="h-4 w-4 mr-1" />
                     Create Draft
@@ -446,7 +445,6 @@ function NewsCard({ item, isExpanded, isSelected, onToggleSelect, onToggleExpand
               size="sm"
               className="h-8"
               onClick={onCreateDraft}
-              disabled={item.status === 'used'}
             >
               <FileEdit className="h-3.5 w-3.5 mr-1" />
               To Draft
