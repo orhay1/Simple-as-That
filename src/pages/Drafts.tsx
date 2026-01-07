@@ -57,7 +57,7 @@ export default function Drafts() {
   const handleRewrite = (body: string, action: string, language?: string) => {
     if (!editDraft) return;
     generateContent.mutate(
-      { type: 'rewrite', inputs: { body, action }, language },
+      { type: 'rewrite', inputs: { body, action, language } },
       {
         onSuccess: (data) => {
           if (data.rewritten) {
