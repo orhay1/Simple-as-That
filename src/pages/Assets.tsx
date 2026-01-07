@@ -63,7 +63,7 @@ export default function Assets() {
             />
           </div>
           <Tabs value={filter} onValueChange={(v) => setFilter(v as FilterType)}>
-            <TabsList>
+            <TabsList dir="ltr">
               <TabsTrigger value="all">{t.common.all}</TabsTrigger>
               <TabsTrigger value="ai">{t.assets.aiGenerated}</TabsTrigger>
               <TabsTrigger value="uploaded">{t.assets.uploaded}</TabsTrigger>
