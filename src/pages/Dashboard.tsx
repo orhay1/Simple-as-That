@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { useNewsResearch } from '@/hooks/useNewsResearch';
 import { useDrafts } from '@/hooks/useDrafts';
 import { usePublications } from '@/hooks/usePublications';
+import { useTranslation } from '@/hooks/useTranslation';
 import { useNavigate } from 'react-router-dom';
 import { Sparkles, FileEdit, CheckCircle, Send, ArrowRight } from 'lucide-react';
 
@@ -13,6 +14,7 @@ export default function Dashboard() {
   const { drafts } = useDrafts();
   const { publications } = usePublications();
   const navigate = useNavigate();
+  const { t } = useTranslation();
 
   const aiToolsCount = newsItems.length;
   const draftCount = drafts.filter(d => d.status === 'draft').length;
@@ -20,18 +22,18 @@ export default function Dashboard() {
   const publishedCount = publications.length;
 
   const stats = [
-    { title: 'AI Tools Researched', value: aiToolsCount, icon: Sparkles, color: 'text-chart-1' },
-    { title: 'Drafts', value: draftCount, icon: FileEdit, color: 'text-chart-2' },
-    { title: 'Approved', value: approvedCount, icon: CheckCircle, color: 'text-chart-3' },
-    { title: 'Published', value: publishedCount, icon: Send, color: 'text-chart-4' },
+    { title: t.dashboard.aiToolsResearched, value: aiToolsCount, icon: Sparkles, color: 'text-chart-1' },
+    { title: t.dashboard.draftsCount, value: draftCount, icon: FileEdit, color: 'text-chart-2' },
+    { title: t.dashboard.approved, value: approvedCount, icon: CheckCircle, color: 'text-chart-3' },
+    { title: t.dashboard.publishedCount, value: publishedCount, icon: Send, color: 'text-chart-4' },
   ];
 
   return (
     <AppLayout>
       <div className="space-y-8">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Dashboard</h1>
-          <p className="text-muted-foreground">Manage your LinkedIn content pipeline</p>
+          <h1 className="text-3xl font-bold text-foreground">{t.dashboard.title}</h1>
+          <p className="text-muted-foreground">{t.dashboard.subtitle}</p>
         </div>
 
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -52,9 +54,9 @@ export default function Dashboard() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center justify-between">
-                Recent AI Tools
+                {t.dashboard.recentAITools}
                 <Button size="sm" variant="outline" onClick={() => navigate('/topics')}>
-                  <Sparkles className="mr-1 h-4 w-4" /> Research
+                  <Sparkles className="me-1 h-4 w-4" /> {t.dashboard.research}
                 </Button>
               </CardTitle>
             </CardHeader>
@@ -68,16 +70,16 @@ export default function Dashboard() {
                   <Badge variant={item.status === 'used' ? 'default' : 'secondary'}>{item.status}</Badge>
                 </div>
               ))}
-              {newsItems.length === 0 && <p className="text-center text-muted-foreground py-8">No AI tools yet. Research some!</p>}
+              {newsItems.length === 0 && <p className="text-center text-muted-foreground py-8">{t.dashboard.noAITools}</p>}
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center justify-between">
-                Recent Drafts
+                {t.dashboard.recentDrafts}
                 <Button size="sm" variant="outline" onClick={() => navigate('/drafts')}>
-                  View All <ArrowRight className="ml-1 h-4 w-4" />
+                  {t.dashboard.viewAll} <ArrowRight className="ms-1 h-4 w-4" />
                 </Button>
               </CardTitle>
             </CardHeader>
@@ -91,7 +93,7 @@ export default function Dashboard() {
                   <Badge variant={draft.status === 'approved' ? 'default' : 'secondary'}>{draft.status}</Badge>
                 </div>
               ))}
-              {drafts.length === 0 && <p className="text-center text-muted-foreground py-8">No drafts yet. Create one from an AI tool!</p>}
+              {drafts.length === 0 && <p className="text-center text-muted-foreground py-8">{t.dashboard.noDrafts}</p>}
             </CardContent>
           </Card>
         </div>

@@ -7,6 +7,7 @@ type GenerationType = 'hashtags' | 'rewrite' | 'image_description';
 interface GenerateContentParams {
   type: GenerationType;
   inputs?: Record<string, any>;
+  language?: string;
 }
 
 interface GenerateImageParams {
@@ -18,9 +19,9 @@ export function useAIGeneration() {
   const queryClient = useQueryClient();
 
   const generateContent = useMutation({
-    mutationFn: async ({ type, inputs = {} }: GenerateContentParams) => {
+    mutationFn: async ({ type, inputs = {}, language }: GenerateContentParams) => {
       const { data, error } = await supabase.functions.invoke('generate-content', {
-        body: { type, inputs },
+        body: { type, inputs, language },
       });
       
       if (error) throw error;

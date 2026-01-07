@@ -10,6 +10,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { useDrafts } from '@/hooks/useDrafts';
 import { useAIGeneration } from '@/hooks/useAIGeneration';
 import { useLinkedIn } from '@/hooks/useLinkedIn';
+import { useTranslation } from '@/hooks/useTranslation';
 import { DraftEditorSheet } from '@/components/drafts/DraftEditorSheet';
 import { Plus, Edit, Trash2, CheckCircle, Send, Loader2, ChevronDown, Link, Linkedin } from 'lucide-react';
 import { PostStatus, PostDraftWithAsset } from '@/types/database';
@@ -19,6 +20,7 @@ export default function Drafts() {
   const { drafts, createDraft, updateDraft, updateDraftStatus, deleteDraft } = useDrafts();
   const { generateContent, generateImage, fetchSourceImage, isGenerating, isFetchingSourceImage } = useAIGeneration();
   const { isConnected, publishToLinkedIn, connection } = useLinkedIn();
+  const { t } = useTranslation();
   
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editDraft, setEditDraft] = useState<PostDraftWithAsset | null>(null);
@@ -40,7 +42,7 @@ export default function Drafts() {
     setDialogOpen(false);
   };
 
-  const handleSave = (data: { title: string; body: string; image_description?: string }) => {
+  const handleSave = (data: { title: string; body: string; image_description?: string; language?: string }) => {
     if (!editDraft) return;
     updateDraft.mutate({ id: editDraft.id, ...data });
     setEditorOpen(false);
@@ -52,10 +54,10 @@ export default function Drafts() {
     setEditorOpen(true);
   };
 
-  const handleRewrite = (body: string, action: string) => {
+  const handleRewrite = (body: string, action: string, language?: string) => {
     if (!editDraft) return;
     generateContent.mutate(
-      { type: 'rewrite', inputs: { body, action } },
+      { type: 'rewrite', inputs: { body, action }, language },
       {
         onSuccess: (data) => {
           if (data.rewritten) {
@@ -108,7 +110,7 @@ export default function Drafts() {
 
   const handleGenerateImage = (imageDescription: string) => {
     if (!editDraft || !imageDescription) {
-      toast.error('Add an image description first, or use "Generate Description"');
+      toast.error('Add an image description first');
       return;
     }
     setIsGeneratingImage(true);
@@ -132,7 +134,7 @@ export default function Drafts() {
       {
         onSuccess: () => {
           setEditDraft(prev => prev ? { ...prev, image_asset_id: assetId } : null);
-          toast.success('Image attached to draft');
+          toast.success(t.common.success);
         }
       }
     );
@@ -140,14 +142,13 @@ export default function Drafts() {
 
   const handleFetchSourceImage = () => {
     if (!editDraft || !editDraft.source_url) {
-      toast.error('No source URL available for this draft');
+      toast.error('No source URL available');
       return;
     }
     fetchSourceImage.mutate(
       { source_url: editDraft.source_url, draft_id: editDraft.id },
       {
         onSuccess: () => {
-          // Refresh the draft to get the new image
           setEditDraft(prev => prev ? { ...prev } : null);
         }
       }
@@ -180,10 +181,9 @@ export default function Drafts() {
     updateDraftStatus.mutate({ id: publishingDraftId, status: 'published' });
     setPublishDialogOpen(false);
     setPublishingDraftId(null);
-    toast.success('Draft marked as published');
+    toast.success(t.common.success);
   };
 
-  // Simplified status colors - removed in_review
   const statusColors: Record<PostStatus, string> = {
     draft: 'bg-muted text-muted-foreground',
     approved: 'bg-chart-2/20 text-chart-2',
@@ -202,23 +202,23 @@ export default function Drafts() {
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-foreground">Drafts</h1>
-            <p className="text-muted-foreground">Create and edit your LinkedIn posts</p>
+            <h1 className="text-3xl font-bold text-foreground">{t.drafts.title}</h1>
+            <p className="text-muted-foreground">{t.drafts.subtitle}</p>
           </div>
           <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
             <DialogTrigger asChild>
-              <Button><Plus className="mr-2 h-4 w-4" /> New Draft</Button>
+              <Button><Plus className="me-2 h-4 w-4" /> {t.drafts.newDraft}</Button>
             </DialogTrigger>
             <DialogContent className="max-w-2xl">
               <DialogHeader>
-                <DialogTitle>Create New Draft</DialogTitle>
-                <DialogDescription>Write your LinkedIn post content below</DialogDescription>
+                <DialogTitle>{t.drafts.newDraft}</DialogTitle>
+                <DialogDescription>{t.drafts.subtitle}</DialogDescription>
               </DialogHeader>
               <div className="space-y-4">
-                <Input placeholder="Post Title" value={title} onChange={(e) => setTitle(e.target.value)} />
-                <Textarea placeholder="Write your LinkedIn post here..." value={body} onChange={(e) => setBody(e.target.value)} rows={10} />
-                <Input placeholder="Image description (for AI generation)" value={imageDescription} onChange={(e) => setImageDescription(e.target.value)} />
-                <Button onClick={handleCreate} className="w-full">Create Draft</Button>
+                <Input placeholder={t.drafts.editDraft} value={title} onChange={(e) => setTitle(e.target.value)} />
+                <Textarea placeholder={t.drafts.postContent} value={body} onChange={(e) => setBody(e.target.value)} rows={10} />
+                <Input placeholder={t.drafts.imageDescription} value={imageDescription} onChange={(e) => setImageDescription(e.target.value)} />
+                <Button onClick={handleCreate} className="w-full">{t.common.create}</Button>
               </div>
             </DialogContent>
           </Dialog>
@@ -231,7 +231,7 @@ export default function Drafts() {
                 <div className="flex items-start justify-between">
                   <CardTitle className="text-lg">{draft.title}</CardTitle>
                   <Badge className={statusColors[draft.status as PostStatus] || statusColors.draft}>
-                    {draft.status.replace('_', ' ')}
+                    {t.drafts.status[draft.status as keyof typeof t.drafts.status] || draft.status}
                   </Badge>
                 </div>
               </CardHeader>
@@ -248,13 +248,12 @@ export default function Drafts() {
 
                 <div className="flex gap-2 flex-wrap">
                   <Button size="sm" variant="outline" onClick={() => openEditor(draft)}>
-                    <Edit className="mr-1 h-3 w-3" /> Edit
+                    <Edit className="me-1 h-3 w-3" /> {t.common.edit}
                   </Button>
 
-                  {/* Simplified workflow: Draft -> Approve -> Publish */}
                   {draft.status === 'draft' && (
                     <Button size="sm" variant="outline" onClick={() => updateDraftStatus.mutate({ id: draft.id, status: 'approved' })}>
-                      <CheckCircle className="mr-1 h-3 w-3" /> Approve
+                      <CheckCircle className="me-1 h-3 w-3" /> {t.drafts.approve}
                     </Button>
                   )}
                   {draft.status === 'approved' && (
@@ -262,26 +261,26 @@ export default function Drafts() {
                       <DropdownMenuTrigger asChild>
                         <Button size="sm" disabled={publishToLinkedIn.isPending}>
                           {publishToLinkedIn.isPending ? (
-                            <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                            <Loader2 className="me-1 h-3 w-3 animate-spin" />
                           ) : (
-                            <Send className="mr-1 h-3 w-3" />
+                            <Send className="me-1 h-3 w-3" />
                           )}
-                          Publish <ChevronDown className="ml-1 h-3 w-3" />
+                          {t.drafts.publish} <ChevronDown className="ms-1 h-3 w-3" />
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent>
                         {isConnected ? (
                           <DropdownMenuItem onClick={() => handlePublishToLinkedIn(draft)}>
-                            <Linkedin className="mr-2 h-4 w-4" /> Publish to LinkedIn
+                            <Linkedin className="me-2 h-4 w-4" /> Publish to LinkedIn
                           </DropdownMenuItem>
                         ) : (
                           <DropdownMenuItem disabled>
-                            <Linkedin className="mr-2 h-4 w-4" /> LinkedIn not connected
+                            <Linkedin className="me-2 h-4 w-4" /> LinkedIn not connected
                           </DropdownMenuItem>
                         )}
                         <DropdownMenuSeparator />
                         <DropdownMenuItem onClick={() => handleManualPublish(draft.id)}>
-                          <Link className="mr-2 h-4 w-4" /> Mark as Published
+                          <Link className="me-2 h-4 w-4" /> Mark as Published
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
@@ -294,11 +293,10 @@ export default function Drafts() {
             </Card>
           ))}
           {drafts.length === 0 && (
-            <Card><CardContent className="py-12 text-center text-muted-foreground">No drafts yet. Create one!</CardContent></Card>
+            <Card><CardContent className="py-12 text-center text-muted-foreground">{t.drafts.noDrafts}</CardContent></Card>
           )}
         </div>
 
-        {/* Editor Sheet with LinkedIn Preview */}
         <DraftEditorSheet
           draft={editDraft}
           open={editorOpen}
@@ -340,7 +338,7 @@ export default function Drafts() {
                 />
               </div>
               <Button onClick={confirmManualPublish} className="w-full">
-                <CheckCircle className="mr-2 h-4 w-4" /> Confirm Published
+                <CheckCircle className="me-2 h-4 w-4" /> {t.common.confirm}
               </Button>
             </div>
           </DialogContent>

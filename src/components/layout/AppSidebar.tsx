@@ -26,19 +26,20 @@ import {
 } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
+import { useTranslation } from '@/hooks/useTranslation';
 import { cn } from '@/lib/utils';
 
 const mainMenuItems = [
-  { title: 'Dashboard', url: '/dashboard', icon: LayoutDashboard },
-  { title: 'Topics', url: '/topics', icon: Lightbulb },
-  { title: 'Drafts', url: '/drafts', icon: FileEdit },
-  { title: 'Assets', url: '/assets', icon: Image },
-  { title: 'Schedule', url: '/schedule', icon: Calendar },
-  { title: 'Published', url: '/published', icon: BarChart3 },
+  { key: 'dashboard' as const, url: '/dashboard', icon: LayoutDashboard },
+  { key: 'topics' as const, url: '/topics', icon: Lightbulb },
+  { key: 'drafts' as const, url: '/drafts', icon: FileEdit },
+  { key: 'assets' as const, url: '/assets', icon: Image },
+  { key: 'schedule' as const, url: '/schedule', icon: Calendar },
+  { key: 'published' as const, url: '/published', icon: BarChart3 },
 ];
 
 const settingsItems = [
-  { title: 'Settings', url: '/settings', icon: Settings },
+  { key: 'settings' as const, url: '/settings', icon: Settings },
 ];
 
 export const AppSidebar = React.forwardRef<
@@ -49,6 +50,7 @@ export const AppSidebar = React.forwardRef<
   const collapsed = state === 'collapsed';
   const location = useLocation();
   const { signOut, userRole } = useAuth();
+  const { t } = useTranslation();
 
   const isActive = (path: string) => location.pathname === path;
 
@@ -70,11 +72,11 @@ export const AppSidebar = React.forwardRef<
 
       <SidebarContent className="px-2">
         <SidebarGroup>
-          {!collapsed && <SidebarGroupLabel className="text-xs uppercase tracking-wider text-sidebar-foreground/50">Content</SidebarGroupLabel>}
+          {!collapsed && <SidebarGroupLabel className="text-xs uppercase tracking-wider text-sidebar-foreground/50">{t.navigation.content}</SidebarGroupLabel>}
           <SidebarGroupContent>
             <SidebarMenu>
               {mainMenuItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
+                <SidebarMenuItem key={item.key}>
                   <SidebarMenuButton asChild>
                     <RouterNavLink 
                       to={item.url}
@@ -84,7 +86,7 @@ export const AppSidebar = React.forwardRef<
                       )}
                     >
                       <item.icon className="h-5 w-5 shrink-0" />
-                      {!collapsed && <span>{item.title}</span>}
+                      {!collapsed && <span>{t.navigation[item.key]}</span>}
                     </RouterNavLink>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -94,11 +96,11 @@ export const AppSidebar = React.forwardRef<
         </SidebarGroup>
 
         <SidebarGroup>
-          {!collapsed && <SidebarGroupLabel className="text-xs uppercase tracking-wider text-sidebar-foreground/50">System</SidebarGroupLabel>}
+          {!collapsed && <SidebarGroupLabel className="text-xs uppercase tracking-wider text-sidebar-foreground/50">{t.navigation.system}</SidebarGroupLabel>}
           <SidebarGroupContent>
             <SidebarMenu>
               {settingsItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
+                <SidebarMenuItem key={item.key}>
                   <SidebarMenuButton asChild>
                     <RouterNavLink 
                       to={item.url}
@@ -108,7 +110,7 @@ export const AppSidebar = React.forwardRef<
                       )}
                     >
                       <item.icon className="h-5 w-5 shrink-0" />
-                      {!collapsed && <span>{item.title}</span>}
+                      {!collapsed && <span>{t.navigation[item.key]}</span>}
                     </RouterNavLink>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -121,8 +123,8 @@ export const AppSidebar = React.forwardRef<
       <SidebarFooter className="border-t border-sidebar-border p-4">
         {!collapsed && userRole && (
           <div className="mb-3 rounded-lg bg-sidebar-accent/50 px-3 py-2">
-            <span className="text-xs text-sidebar-foreground/60">Role:</span>
-            <span className="ml-1 text-xs font-medium capitalize text-sidebar-foreground">{userRole}</span>
+            <span className="text-xs text-sidebar-foreground/60">{t.common.role}:</span>
+            <span className="ms-1 text-xs font-medium capitalize text-sidebar-foreground">{userRole}</span>
           </div>
         )}
         <Button
@@ -135,7 +137,7 @@ export const AppSidebar = React.forwardRef<
           )}
         >
           <LogOut className="h-4 w-4 shrink-0" />
-          {!collapsed && <span>Sign Out</span>}
+          {!collapsed && <span>{t.common.signOut}</span>}
         </Button>
       </SidebarFooter>
     </Sidebar>
