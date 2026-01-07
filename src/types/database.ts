@@ -36,6 +36,7 @@ export interface PostDraft {
   scheduled_at: string | null;
   published_url: string | null;
   versions: any[];
+  language: string | null;
   created_at: string;
   updated_at: string;
 }
