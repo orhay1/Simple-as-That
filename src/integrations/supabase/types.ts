@@ -238,6 +238,7 @@ export type Database = {
           image_asset_id: string | null
           image_description: string | null
           language: string | null
+          news_item_id: string | null
           published_url: string | null
           scheduled_at: string | null
           source_url: string | null
@@ -257,6 +258,7 @@ export type Database = {
           image_asset_id?: string | null
           image_description?: string | null
           language?: string | null
+          news_item_id?: string | null
           published_url?: string | null
           scheduled_at?: string | null
           source_url?: string | null
@@ -276,6 +278,7 @@ export type Database = {
           image_asset_id?: string | null
           image_description?: string | null
           language?: string | null
+          news_item_id?: string | null
           published_url?: string | null
           scheduled_at?: string | null
           source_url?: string | null
@@ -291,6 +294,13 @@ export type Database = {
             columns: ["image_asset_id"]
             isOneToOne: false
             referencedRelation: "assets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "post_drafts_news_item_id_fkey"
+            columns: ["news_item_id"]
+            isOneToOne: false
+            referencedRelation: "ai_news_items"
             referencedColumns: ["id"]
           },
           {

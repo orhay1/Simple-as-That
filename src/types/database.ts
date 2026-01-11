@@ -24,6 +24,7 @@ export interface TopicIdea {
 export interface PostDraft {
   id: string;
   topic_id: string | null;
+  news_item_id: string | null;
   title: string;
   body: string;
   hashtags_broad: string[] | null;

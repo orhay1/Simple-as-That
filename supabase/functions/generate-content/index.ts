@@ -13,7 +13,7 @@ const corsHeaders = {
 
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-type GenerationType = 'hashtags' | 'rewrite' | 'image_description' | 'draft';
+type GenerationType = 'hashtags' | 'hashtags_free' | 'rewrite' | 'image_description' | 'draft';
 
 interface GenerateRequest {
   type: GenerationType;
@@ -373,6 +373,120 @@ Return ONLY the JSON object, no additional text.`;
   return { hashtags, usage };
 }
 
+// Generate hashtags using Lovable AI (Free tier - Gemini)
+async function generateHashtagsFree(inputs: Record<string, any>) {
+  const { body, title } = inputs;
+  
+  const lovableApiKey = Deno.env.get('LOVABLE_API_KEY');
+  if (!lovableApiKey) {
+    throw new Error('LOVABLE_API_KEY is not configured');
+  }
+
+  const systemPrompt = 'You are a LinkedIn SEO expert. Generate hashtags in the exact JSON format requested.';
+  
+  const userPrompt = `You are a LinkedIn hashtag expert. Generate PRECISE, TOOL-SPECIFIC hashtags.
+
+## Post Content
+Title: ${title}
+Content: ${body}
+
+## CRITICAL INSTRUCTIONS
+
+### Step 1: Extract the EXACT tool/product name
+- Look for proper nouns, product names, or AI tool names in the content
+- Examples: "Cursor", "Claude", "Midjourney", "Notion AI", "GitHub Copilot"
+
+### Step 2: Generate hashtags following this structure
+
+1. **Tool-Specific Hashtag** (1): Create a hashtag using the EXACT tool name
+   - Format: #ToolName or #ToolNameAI
+   - Examples: #CursorAI, #ClaudeAI, #Midjourney, #GitHubCopilot
+   
+2. **Niche Category Hashtags** (2): Specific to what the tool DOES
+   - Focus on the tool's primary function
+   - Examples: #CodeGeneration, #AIWriting, #ImageGeneration, #AIProductivity
+   
+3. **Broad Hashtags** (1-2): General tech/AI categories
+   - Only include 1-2 at most
+   - Examples: #AI, #MachineLearning, #TechTools
+
+### Rules
+- MAXIMUM 5 hashtags total (4-5 is ideal)
+- First hashtag MUST be the tool name
+- Include # symbol with each hashtag
+- Use CamelCase for multi-word hashtags
+- NO generic hashtags like #innovation, #future, #technology alone
+
+## Output Format
+Return a valid JSON object with:
+- "hashtags_broad": Array of 1-2 broad category hashtags
+- "hashtags_niche": Array of 2-3 specific function hashtags (including the tool name)
+- "hashtags_trending": Array of 0-1 trending hashtags (only if truly relevant)
+
+Return ONLY the JSON object, no additional text.`;
+
+  console.log('Calling Lovable AI Gateway for hashtags_free');
+  
+  const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${lovableApiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model: 'google/gemini-3-flash-preview',
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userPrompt }
+      ],
+    }),
+  });
+
+  if (!response.ok) {
+    if (response.status === 429) {
+      throw new Error('Rate limit exceeded. Please try again later.');
+    }
+    if (response.status === 402) {
+      throw new Error('API credits exhausted. Please add credits to continue.');
+    }
+    const errorText = await response.text();
+    console.error('Lovable AI error:', response.status, errorText);
+    throw new Error(`AI generation failed: ${errorText}`);
+  }
+
+  const data = await response.json();
+  const content = data.choices?.[0]?.message?.content || '';
+
+  // Normalize response - handle multiple possible key formats
+  let hashtags = { hashtags_broad: [] as string[], hashtags_niche: [] as string[], hashtags_trending: [] as string[] };
+  try {
+    const jsonMatch = content.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      const parsed = JSON.parse(jsonMatch[0]);
+      hashtags = {
+        hashtags_broad: parsed.hashtags_broad || parsed.broad_hashtags || parsed.broad || [],
+        hashtags_niche: parsed.hashtags_niche || parsed.niche_specific_hashtags || parsed.niche || [],
+        hashtags_trending: parsed.hashtags_trending || parsed.trending_hashtags || parsed.trending || [],
+      };
+    }
+  } catch (e) {
+    console.error('Failed to parse hashtags:', e);
+  }
+
+  await logToLedger({
+    generation_type: 'hashtags_free',
+    system_prompt: systemPrompt,
+    user_prompt: userPrompt,
+    inputs,
+    raw_output: content,
+    parsed_output: hashtags,
+    model: 'google/gemini-3-flash-preview',
+    token_usage: data.usage,
+  });
+
+  return { hashtags, usage: data.usage };
+}
+
 async function rewriteContent(inputs: Record<string, any>) {
   const { body, action, language = 'en' } = inputs;
   
@@ -603,6 +717,9 @@ serve(async (req) => {
         break;
       case 'hashtags':
         result = await generateHashtags(inputs);
+        break;
+      case 'hashtags_free':
+        result = await generateHashtagsFree(inputs);
         break;
       case 'rewrite':
         result = await rewriteContent(inputs);
