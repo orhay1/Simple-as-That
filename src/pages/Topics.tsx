@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useDrafts } from '@/hooks/useDrafts';
 import { useNewsResearch, type NewsItem } from '@/hooks/useNewsResearch';
@@ -292,12 +293,19 @@ export default function Topics() {
                 </div>
 
                 {selectedItem.full_content && (
-                  <div className="space-y-2">
-                    <h4 className="font-medium">{t.topics.fullContent}</h4>
-                    <div className="text-sm text-muted-foreground whitespace-pre-wrap max-h-96 overflow-y-auto bg-muted/50 p-4 rounded-lg">
-                      {selectedItem.full_content}
-                    </div>
-                  </div>
+                  <Collapsible>
+                    <CollapsibleTrigger asChild>
+                      <Button variant="ghost" className="w-full justify-between px-0 hover:bg-transparent">
+                        <h4 className="font-medium">Full Scraped Content</h4>
+                        <ChevronDown className="h-4 w-4" />
+                      </Button>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent>
+                      <div className="text-sm text-muted-foreground whitespace-pre-wrap max-h-96 overflow-y-auto bg-muted/50 p-4 rounded-lg mt-2">
+                        {selectedItem.full_content}
+                      </div>
+                    </CollapsibleContent>
+                  </Collapsible>
                 )}
 
                 {selectedItem.tags && selectedItem.tags.length > 0 && (
