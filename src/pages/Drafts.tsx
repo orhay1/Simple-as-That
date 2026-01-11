@@ -11,6 +11,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { useDrafts } from '@/hooks/useDrafts';
 import { useAIGeneration } from '@/hooks/useAIGeneration';
 import { useLinkedIn } from '@/hooks/useLinkedIn';
+import { usePublications } from '@/hooks/usePublications';
 import { useTranslation } from '@/hooks/useTranslation';
 import { DraftEditorSheet } from '@/components/drafts/DraftEditorSheet';
 import { Plus, Edit, Trash2, CheckCircle, Send, Loader2, ChevronDown, Link, Linkedin } from 'lucide-react';
@@ -21,6 +22,7 @@ export default function Drafts() {
   const { drafts, createDraft, updateDraft, updateDraftStatus, deleteDraft } = useDrafts();
   const { generateContent, generateImage, fetchSourceImage, isGenerating, isFetchingSourceImage } = useAIGeneration();
   const { isConnected, publishToLinkedIn, connection } = useLinkedIn();
+  const { createPublication } = usePublications();
   const { t } = useTranslation();
   
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -210,6 +212,26 @@ export default function Drafts() {
 
   const confirmManualPublish = () => {
     if (!publishingDraftId) return;
+    
+    // Find the draft being published
+    const draft = drafts.find(d => d.id === publishingDraftId);
+    if (draft) {
+      // Create publication record with full content for preview
+      createPublication.mutate({
+        post_draft_id: publishingDraftId,
+        published_url: publishUrl || undefined,
+        is_manual_publish: true,
+        final_content: {
+          title: draft.title,
+          body: draft.body,
+          hashtags: allHashtags(draft),
+          image_url: draft.image_asset?.file_url || null,
+          image_description: draft.image_description || null,
+          language: draft.language || 'en',
+        },
+      });
+    }
+    
     updateDraft.mutate({ id: publishingDraftId, published_url: publishUrl || undefined });
     updateDraftStatus.mutate({ id: publishingDraftId, status: 'published' });
     setPublishDialogOpen(false);

@@ -165,6 +165,10 @@ export interface Translations {
     impressions: string;
     likes: string;
     comments: string;
+    viewPreview: string;
+    publishedOn: string;
+    manualPublish: string;
+    linkedInPost: string;
   };
   settings: {
     title: string;
@@ -465,6 +469,10 @@ export const translations: Record<Language, Translations> = {
       impressions: 'Impressions',
       likes: 'Likes',
       comments: 'Comments',
+      viewPreview: 'View Preview',
+      publishedOn: 'Published on',
+      manualPublish: 'Manual',
+      linkedInPost: 'View on LinkedIn',
     },
     settings: {
       title: 'Settings',
@@ -763,6 +771,10 @@ export const translations: Record<Language, Translations> = {
       impressions: 'חשיפות',
       likes: 'לייקים',
       comments: 'תגובות',
+      viewPreview: 'צפה בתצוגה מקדימה',
+      publishedOn: 'פורסם ב',
+      manualPublish: 'ידני',
+      linkedInPost: 'צפה בלינקדאין',
     },
     settings: {
       title: 'הגדרות',

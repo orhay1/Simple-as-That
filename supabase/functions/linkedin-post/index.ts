@@ -189,7 +189,18 @@ serve(async (req) => {
         .single();
 
       if (draft) {
-        // Create publication record
+        // Get the image asset URL if exists
+        let imageUrl = null;
+        if (draft.image_asset_id) {
+          const { data: asset } = await supabase
+            .from('assets')
+            .select('file_url')
+            .eq('id', draft.image_asset_id)
+            .single();
+          imageUrl = asset?.file_url || null;
+        }
+
+        // Create publication record with full content for preview
         await supabase
           .from('publications')
           .insert({
@@ -201,6 +212,9 @@ serve(async (req) => {
               title: draft.title,
               body: draft.body,
               hashtags: [...(draft.hashtags_broad || []), ...(draft.hashtags_niche || []), ...(draft.hashtags_trending || [])],
+              image_url: imageUrl,
+              image_description: draft.image_description,
+              language: draft.language || 'en',
             },
           });
       }
