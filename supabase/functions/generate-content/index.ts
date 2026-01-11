@@ -96,7 +96,8 @@ async function callOpenAI(
 }
 
 async function generateTopics(inputs: Record<string, any>) {
-  const customPrompt = await getPromptFromSettings('topic_system_prompt');
+  // Use 'perplexity_system_prompt' to match Settings UI key
+  const customPrompt = await getPromptFromSettings('perplexity_system_prompt');
   
   const defaultPrompt = `You are a LinkedIn content strategist and thought leader. Your task is to generate compelling topic ideas that drive engagement and establish authority.
 
@@ -184,7 +185,8 @@ Return ONLY the JSON array, no additional text or explanation.`;
 async function generateDraft(inputs: Record<string, any>) {
   const { topic_id, title, hook, rationale, language = 'en' } = inputs;
   
-  const customPrompt = await getPromptFromSettings('draft_system_prompt');
+  // Use 'draft_generator_prompt' to match Settings UI key (if added)
+  const customPrompt = await getPromptFromSettings('draft_generator_prompt');
   
   const languageNames: Record<string, string> = {
     'en': 'English',
@@ -276,7 +278,8 @@ Return ONLY the JSON object, no additional text.`;
 async function generateHashtags(inputs: Record<string, any>) {
   const { body, title } = inputs;
   
-  const customPrompt = await getPromptFromSettings('hashtag_system_prompt');
+  // Use 'hashtag_generator_prompt' to match Settings UI key
+  const customPrompt = await getPromptFromSettings('hashtag_generator_prompt');
   
   const defaultPrompt = `You are a LinkedIn hashtag expert. Generate PRECISE, TOOL-SPECIFIC hashtags.
 
