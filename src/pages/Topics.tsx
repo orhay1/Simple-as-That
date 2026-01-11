@@ -49,13 +49,14 @@ export default function Topics() {
         language: contentLanguage,
       });
 
-      // Create draft with AI-generated content
+      // Create draft with AI-generated content and link to news item
       createDraft.mutate({
         title: item.title,
         body: result.draft?.body || item.summary || '',
         image_description: result.draft?.image_description,
         source_url: item.source_url || undefined,
         language: contentLanguage,
+        news_item_id: item.id,
       });
       
       updateStatus.mutate({ id: item.id, status: 'used' });

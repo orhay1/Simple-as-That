@@ -15,7 +15,7 @@ import { AssetPickerDialog } from './AssetPickerDialog';
 import { PostDraftWithAsset } from '@/types/database';
 import { Asset } from '@/types/database';
 import { Language } from '@/lib/i18n/translations';
-import { Wand2, Hash, Image, RotateCcw, ChevronDown, Loader2, Save, FolderOpen, Settings, Globe, Languages } from 'lucide-react';
+import { Wand2, Hash, Image, RotateCcw, ChevronDown, Loader2, Save, FolderOpen, Settings, Globe, Languages, Search, Sparkles } from 'lucide-react';
 
 interface DraftEditorSheetProps {
   draft: PostDraftWithAsset | null;
@@ -23,7 +23,8 @@ interface DraftEditorSheetProps {
   onOpenChange: (open: boolean) => void;
   onSave: (data: { title: string; body: string; image_description?: string; language?: string }) => void;
   onRewrite: (body: string, action: string, language?: string) => void;
-  onGenerateHashtags: (title: string, body: string) => void;
+  onRetrieveHashtagsFromResearch: () => void;
+  onGenerateHashtagsFree: (title: string, body: string) => void;
   onGenerateImageDescription: (title: string, body: string) => void;
   onGenerateImage: (imageDescription: string) => void;
   onFetchSourceImage?: () => void;
@@ -31,6 +32,7 @@ interface DraftEditorSheetProps {
   isGenerating: boolean;
   isGeneratingImage?: boolean;
   isFetchingSourceImage?: boolean;
+  hasLinkedResearch?: boolean;
   profileName?: string;
   profileAvatar?: string;
   profileHeadline?: string;
@@ -42,7 +44,8 @@ export function DraftEditorSheet({
   onOpenChange,
   onSave,
   onRewrite,
-  onGenerateHashtags,
+  onRetrieveHashtagsFromResearch,
+  onGenerateHashtagsFree,
   onGenerateImageDescription,
   onGenerateImage,
   onFetchSourceImage,
@@ -50,6 +53,7 @@ export function DraftEditorSheet({
   isGenerating,
   isGeneratingImage,
   isFetchingSourceImage,
+  hasLinkedResearch,
   profileName,
   profileAvatar,
   profileHeadline,
@@ -201,10 +205,28 @@ export function DraftEditorSheet({
                   </DropdownMenuContent>
                 </DropdownMenu>
 
-                <Button size="sm" variant="outline" onClick={() => onGenerateHashtags(title, body)} disabled={isGenerating}>
-                  {isGenerating ? <Loader2 className="me-1 h-3 w-3 animate-spin" /> : <Hash className="me-1 h-3 w-3" />}
-                  {t.drafts.generateHashtags}
-                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button size="sm" variant="outline" disabled={isGenerating}>
+                      {isGenerating ? <Loader2 className="me-1 h-3 w-3 animate-spin" /> : <Hash className="me-1 h-3 w-3" />}
+                      {t.drafts.generateHashtags} <ChevronDown className="ms-1 h-3 w-3" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent>
+                    <DropdownMenuLabel>Source</DropdownMenuLabel>
+                    <DropdownMenuItem 
+                      onClick={onRetrieveHashtagsFromResearch}
+                      disabled={!hasLinkedResearch}
+                    >
+                      <Search className="mr-2 h-4 w-4" /> Retrieve from Research
+                      {!hasLinkedResearch && <span className="ml-2 text-xs text-muted-foreground">(No linked research)</span>}
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={() => onGenerateHashtagsFree(title, body)}>
+                      <Sparkles className="mr-2 h-4 w-4" /> Generate with AI (Free)
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
 
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>

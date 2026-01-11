@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { AppLayout } from '@/components/layout/AppLayout';
+import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -75,10 +76,42 @@ export default function Drafts() {
     );
   };
 
-  const handleGenerateHashtags = (title: string, body: string) => {
+  const handleRetrieveHashtagsFromResearch = async () => {
     if (!editDraft) return;
+    if (!editDraft.news_item_id) {
+      toast.error('No linked research - use Generate with AI instead');
+      return;
+    }
+    
+    // Fetch the original news item to get tags
+    const { data: newsItem, error } = await supabase
+      .from('ai_news_items')
+      .select('tags')
+      .eq('id', editDraft.news_item_id)
+      .single();
+    
+    if (error || !newsItem?.tags?.length) {
+      toast.warning('No tags found in research - use Generate with AI instead');
+      return;
+    }
+    
+    // Convert research tags to hashtags (remove spaces, capitalize)
+    const hashtags = newsItem.tags.map((tag: string) => 
+      tag.replace(/\s+/g, '').replace(/^\w/, c => c.toUpperCase())
+    );
+    
+    updateDraft.mutate({
+      id: editDraft.id,
+      hashtags_niche: hashtags,
+    });
+    toast.success('Hashtags retrieved from research');
+  };
+
+  const handleGenerateHashtagsFree = (title: string, body: string) => {
+    if (!editDraft) return;
+    
     generateContent.mutate(
-      { type: 'hashtags', inputs: { body, title } },
+      { type: 'hashtags_free', inputs: { title, body } },
       {
         onSuccess: (data) => {
           if (data.hashtags) {
@@ -306,7 +339,8 @@ export default function Drafts() {
           }}
           onSave={handleSave}
           onRewrite={handleRewrite}
-          onGenerateHashtags={handleGenerateHashtags}
+          onRetrieveHashtagsFromResearch={handleRetrieveHashtagsFromResearch}
+          onGenerateHashtagsFree={handleGenerateHashtagsFree}
           onGenerateImageDescription={handleGenerateImageDescription}
           onGenerateImage={handleGenerateImage}
           onFetchSourceImage={handleFetchSourceImage}
@@ -314,6 +348,7 @@ export default function Drafts() {
           isGenerating={isGenerating}
           isGeneratingImage={isGeneratingImage}
           isFetchingSourceImage={isFetchingSourceImage}
+          hasLinkedResearch={!!editDraft?.news_item_id}
           profileName={connection?.profile_name || undefined}
           profileAvatar={connection?.avatar_url || undefined}
           profileHeadline={connection?.headline || undefined}

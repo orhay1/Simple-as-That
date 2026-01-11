@@ -2,7 +2,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
-type GenerationType = 'hashtags' | 'rewrite' | 'image_description' | 'draft';
+type GenerationType = 'hashtags' | 'hashtags_free' | 'rewrite' | 'image_description' | 'draft';
 
 interface GenerateContentParams {
   type: GenerationType;
@@ -28,7 +28,7 @@ export function useAIGeneration() {
       return data;
     },
     onSuccess: (data, variables) => {
-      if (variables.type === 'hashtags') {
+      if (variables.type === 'hashtags' || variables.type === 'hashtags_free') {
         toast.success('Hashtags generated');
       } else if (variables.type === 'rewrite') {
         toast.success('Content rewritten');
