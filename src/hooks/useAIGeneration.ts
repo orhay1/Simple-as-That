@@ -2,7 +2,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
-type GenerationType = 'hashtags' | 'rewrite' | 'image_description' | 'draft';
+type GenerationType = 'hashtags' | 'rewrite' | 'image_description';
 
 interface GenerateContentParams {
   type: GenerationType;
@@ -34,8 +34,6 @@ export function useAIGeneration() {
         toast.success('Content rewritten');
       } else if (variables.type === 'image_description') {
         toast.success('Image description generated');
-      } else if (variables.type === 'draft') {
-        toast.success('Draft content generated');
       }
     },
     onError: (error: any) => {

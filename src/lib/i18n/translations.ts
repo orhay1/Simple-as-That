@@ -84,7 +84,6 @@ export interface Translations {
     visitTool: string;
     viewSource: string;
     used: string;
-    generatingDraft: string;
   };
   research: {
     title: string;
@@ -383,7 +382,6 @@ export const translations: Record<Language, Translations> = {
       visitTool: 'Visit Tool',
       viewSource: 'View Source',
       used: 'Used',
-      generatingDraft: 'Generating draft...',
     },
     research: {
       title: 'Research AI Tools',
@@ -680,7 +678,6 @@ export const translations: Record<Language, Translations> = {
       visitTool: 'בקר בכלי',
       viewSource: 'הצג מקור',
       used: 'בשימוש',
-      generatingDraft: 'מייצר טיוטה...',
     },
     research: {
       title: 'חקור כלי AI',

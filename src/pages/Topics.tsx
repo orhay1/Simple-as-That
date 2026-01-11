@@ -13,61 +13,33 @@ import { Sparkles, Star, Archive, FileEdit, Trash2, Loader2, Search, Newspaper, 
 import { toast } from 'sonner';
 import { ResearchDialog } from '@/components/topics/ResearchDialog';
 import { useTranslation } from '@/hooks/useTranslation';
-import { useAIGeneration } from '@/hooks/useAIGeneration';
 
 export default function Topics() {
   const { t } = useTranslation();
   const { contentLanguage } = useLanguage();
   const { createDraft } = useDrafts();
-  const { generateContent } = useAIGeneration();
   const { newsItems, researchNews, updateStatus, deleteNewsItem, isResearching, researchStatus } = useNewsResearch();
   const navigate = useNavigate();
   const [researchDialogOpen, setResearchDialogOpen] = useState(false);
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
   const [selectedItem, setSelectedItem] = useState<NewsItem | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const [isGeneratingDraft, setIsGeneratingDraft] = useState(false);
 
   const handleResearch = (query?: string, count?: number) => {
     researchNews.mutate({ query, count });
     setResearchDialogOpen(false);
   };
 
-  const handleCreateDraftFromNews = async (item: NewsItem) => {
-    setIsGeneratingDraft(true);
-    
-    try {
-      // Call AI to generate post in target language
-      const result = await generateContent.mutateAsync({
-        type: 'draft',
-        inputs: {
-          title: item.title,
-          summary: item.summary,
-          full_content: item.full_content,
-          source_url: item.source_url,
-        },
-        language: contentLanguage,
-      });
-      
-      // Create draft with AI-generated content
-      createDraft.mutate({
-        title: item.title,
-        body: result.body || item.summary || '',
-        source_url: item.source_url || undefined,
-        language: contentLanguage,
-        hashtags_broad: result.hashtags?.hashtags_broad,
-        hashtags_niche: result.hashtags?.hashtags_niche,
-      });
-      
-      updateStatus.mutate({ id: item.id, status: 'used' });
-      toast.success(t.drafts.status.draft + ' ' + t.common.success.toLowerCase());
-      navigate('/drafts');
-    } catch (error) {
-      console.error('Failed to generate draft:', error);
-      toast.error(t.common.error);
-    } finally {
-      setIsGeneratingDraft(false);
-    }
+  const handleCreateDraftFromNews = (item: NewsItem) => {
+    createDraft.mutate({
+      title: item.title,
+      body: item.summary || '',
+      source_url: item.source_url || undefined,
+      language: contentLanguage,
+    });
+    updateStatus.mutate({ id: item.id, status: 'used' });
+    toast.success(t.drafts.status.draft + ' ' + t.common.success.toLowerCase());
+    navigate('/drafts');
   };
 
   const toggleExpand = (id: string) => {
@@ -116,48 +88,24 @@ export default function Topics() {
     clearSelection();
   };
 
-  const handleBatchToDraft = async () => {
+  const handleBatchToDraft = () => {
     if (selectedIds.size === 0) return;
     
     const itemsToConvert = newsItems.filter(item => selectedIds.has(item.id) && item.status !== 'used');
-    if (itemsToConvert.length === 0) return;
     
-    setIsGeneratingDraft(true);
+    itemsToConvert.forEach(item => {
+      createDraft.mutate({
+        title: item.title,
+        body: item.summary || '',
+        source_url: item.source_url || undefined,
+        language: contentLanguage,
+      });
+      updateStatus.mutate({ id: item.id, status: 'used' });
+    });
     
-    try {
-      // Generate drafts sequentially to avoid rate limits
-      for (const item of itemsToConvert) {
-        const result = await generateContent.mutateAsync({
-          type: 'draft',
-          inputs: {
-            title: item.title,
-            summary: item.summary,
-            full_content: item.full_content,
-            source_url: item.source_url,
-          },
-          language: contentLanguage,
-        });
-        
-        createDraft.mutate({
-          title: item.title,
-          body: result.body || item.summary || '',
-          source_url: item.source_url || undefined,
-          language: contentLanguage,
-          hashtags_broad: result.hashtags?.hashtags_broad,
-          hashtags_niche: result.hashtags?.hashtags_niche,
-        });
-        updateStatus.mutate({ id: item.id, status: 'used' });
-      }
-      
-      toast.success(`${itemsToConvert.length} ${t.navigation.drafts.toLowerCase()}`);
-      clearSelection();
-      navigate('/drafts');
-    } catch (error) {
-      console.error('Failed to generate drafts:', error);
-      toast.error(t.common.error);
-    } finally {
-      setIsGeneratingDraft(false);
-    }
+    toast.success(`${itemsToConvert.length} ${t.navigation.drafts.toLowerCase()}`);
+    clearSelection();
+    navigate('/drafts');
   };
 
   const groupedNews = {
@@ -219,18 +167,9 @@ export default function Topics() {
                     <Trash2 className="h-4 w-4 mr-1" />
                     {t.common.delete} ({selectedIds.size})
                   </Button>
-                  <Button size="sm" onClick={handleBatchToDraft} disabled={isGeneratingDraft}>
-                    {isGeneratingDraft ? (
-                      <>
-                        <Loader2 className="h-4 w-4 mr-1 animate-spin" />
-                        {t.topics.generatingDraft}
-                      </>
-                    ) : (
-                      <>
-                        <FileEdit className="h-4 w-4 mr-1" />
-                        {t.topics.toDrafts} ({selectedIds.size})
-                      </>
-                    )}
+                  <Button size="sm" onClick={handleBatchToDraft}>
+                    <FileEdit className="h-4 w-4 mr-1" />
+                    {t.topics.toDrafts} ({selectedIds.size})
                   </Button>
                 </div>
               </div>
