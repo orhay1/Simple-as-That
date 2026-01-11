@@ -6,12 +6,13 @@ import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator, DropdownMenuLabel } from '@/components/ui/dropdown-menu';
 import { useDrafts } from '@/hooks/useDrafts';
 import { useNewsResearch, type NewsItem } from '@/hooks/useNewsResearch';
 import { useAIGeneration } from '@/hooks/useAIGeneration';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useNavigate } from 'react-router-dom';
-import { Sparkles, Star, Archive, FileEdit, Trash2, Loader2, Search, Newspaper, ExternalLink, ChevronDown, ChevronUp, CheckSquare, X } from 'lucide-react';
+import { Sparkles, Star, Archive, FileEdit, Trash2, Loader2, Search, Newspaper, ExternalLink, ChevronDown, ChevronUp, CheckSquare, X, Copy, Hash } from 'lucide-react';
 import { toast } from 'sonner';
 import { ResearchDialog } from '@/components/topics/ResearchDialog';
 import { useTranslation } from '@/hooks/useTranslation';
@@ -19,7 +20,7 @@ import { useTranslation } from '@/hooks/useTranslation';
 export default function Topics() {
   const { t } = useTranslation();
   const { contentLanguage } = useLanguage();
-  const { createDraft } = useDrafts();
+  const { drafts, createDraft, updateDraft } = useDrafts();
   const { generateContent, isGenerating } = useAIGeneration();
   const { newsItems, researchNews, updateStatus, deleteNewsItem, isResearching, researchStatus } = useNewsResearch();
   const navigate = useNavigate();
@@ -339,10 +340,63 @@ export default function Topics() {
                 )}
 
                 {selectedItem.tags && selectedItem.tags.length > 0 && (
-                  <div className="flex flex-wrap gap-1">
-                    {selectedItem.tags.map((tag, i) => (
-                      <Badge key={i} variant="secondary" className="text-xs">{tag}</Badge>
-                    ))}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <h4 className="font-medium flex items-center gap-2">
+                        <Hash className="h-4 w-4" />
+                        Tags
+                      </h4>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button size="sm" variant="outline">
+                            <Copy className="h-3 w-3 mr-1" /> Copy Tags <ChevronDown className="h-3 w-3 ml-1" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => {
+                            const hashtags = selectedItem.tags!.map(tag => 
+                              `#${tag.replace(/\s+/g, '').replace(/^\w/, c => c.toUpperCase())}`
+                            ).join(' ');
+                            navigator.clipboard.writeText(hashtags);
+                            toast.success('Hashtags copied to clipboard');
+                          }}>
+                            <Copy className="h-4 w-4 mr-2" /> Copy All as Hashtags
+                          </DropdownMenuItem>
+                          {drafts.length > 0 && (
+                            <>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuLabel>Add to Draft</DropdownMenuLabel>
+                              {drafts.slice(0, 5).map(draft => (
+                                <DropdownMenuItem 
+                                  key={draft.id}
+                                  onClick={() => {
+                                    const hashtags = selectedItem.tags!.map(tag => 
+                                      tag.replace(/\s+/g, '').replace(/^\w/, c => c.toUpperCase())
+                                    );
+                                    updateDraft.mutate({
+                                      id: draft.id,
+                                      hashtags_niche: [
+                                        ...(draft.hashtags_niche || []),
+                                        ...hashtags.filter(h => !(draft.hashtags_niche || []).includes(h))
+                                      ],
+                                    });
+                                    toast.success(`Tags added to "${draft.title}"`);
+                                  }}
+                                >
+                                  <FileEdit className="h-4 w-4 mr-2" /> 
+                                  <span className="truncate max-w-[200px]">{draft.title}</span>
+                                </DropdownMenuItem>
+                              ))}
+                            </>
+                          )}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                    <div className="flex flex-wrap gap-1">
+                      {selectedItem.tags.map((tag, i) => (
+                        <Badge key={i} variant="secondary" className="text-xs">{tag}</Badge>
+                      ))}
+                    </div>
                   </div>
                 )}
 
