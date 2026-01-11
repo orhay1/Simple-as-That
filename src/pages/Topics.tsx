@@ -8,6 +8,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useDrafts } from '@/hooks/useDrafts';
 import { useNewsResearch, type NewsItem } from '@/hooks/useNewsResearch';
+import { useAIGeneration } from '@/hooks/useAIGeneration';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useNavigate } from 'react-router-dom';
 import { Sparkles, Star, Archive, FileEdit, Trash2, Loader2, Search, Newspaper, ExternalLink, ChevronDown, ChevronUp, CheckSquare, X } from 'lucide-react';
@@ -19,28 +20,53 @@ export default function Topics() {
   const { t } = useTranslation();
   const { contentLanguage } = useLanguage();
   const { createDraft } = useDrafts();
+  const { generateContent, isGenerating } = useAIGeneration();
   const { newsItems, researchNews, updateStatus, deleteNewsItem, isResearching, researchStatus } = useNewsResearch();
   const navigate = useNavigate();
   const [researchDialogOpen, setResearchDialogOpen] = useState(false);
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
   const [selectedItem, setSelectedItem] = useState<NewsItem | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [generatingItemId, setGeneratingItemId] = useState<string | null>(null);
 
   const handleResearch = (query?: string, count?: number) => {
     researchNews.mutate({ query, count });
     setResearchDialogOpen(false);
   };
 
-  const handleCreateDraftFromNews = (item: NewsItem) => {
-    createDraft.mutate({
-      title: item.title,
-      body: item.summary || '',
-      source_url: item.source_url || undefined,
-      language: contentLanguage,
-    });
-    updateStatus.mutate({ id: item.id, status: 'used' });
-    toast.success(t.drafts.status.draft + ' ' + t.common.success.toLowerCase());
-    navigate('/drafts');
+  const handleCreateDraftFromNews = async (item: NewsItem) => {
+    setGeneratingItemId(item.id);
+    try {
+      // Call AI to generate the post using Custom GPT instructions
+      const result = await generateContent.mutateAsync({
+        type: 'draft',
+        inputs: {
+          title: item.title,
+          summary: item.summary,
+          full_content: item.full_content,
+          source_url: item.source_url,
+        },
+        language: contentLanguage,
+      });
+
+      // Create draft with AI-generated content
+      createDraft.mutate({
+        title: item.title,
+        body: result.draft?.body || item.summary || '',
+        image_description: result.draft?.image_description,
+        source_url: item.source_url || undefined,
+        language: contentLanguage,
+      });
+      
+      updateStatus.mutate({ id: item.id, status: 'used' });
+      toast.success(t.drafts.status.draft + ' ' + t.common.success.toLowerCase());
+      navigate('/drafts');
+    } catch (error) {
+      console.error('Failed to generate draft:', error);
+      toast.error('Failed to generate draft. Please try again.');
+    } finally {
+      setGeneratingItemId(null);
+    }
   };
 
   const toggleExpand = (id: string) => {
@@ -194,6 +220,7 @@ export default function Topics() {
                       item={item}
                       isExpanded={expandedItems.has(item.id)}
                       isSelected={selectedIds.has(item.id)}
+                      isGenerating={generatingItemId === item.id}
                       onToggleSelect={() => toggleSelect(item.id)}
                       onToggleExpand={() => toggleExpand(item.id)}
                       onCreateDraft={() => handleCreateDraftFromNews(item)}
@@ -224,6 +251,7 @@ export default function Topics() {
                       item={item}
                       isExpanded={expandedItems.has(item.id)}
                       isSelected={selectedIds.has(item.id)}
+                      isGenerating={generatingItemId === item.id}
                       onToggleSelect={() => toggleSelect(item.id)}
                       onToggleExpand={() => toggleExpand(item.id)}
                       onCreateDraft={() => handleCreateDraftFromNews(item)}
@@ -254,6 +282,7 @@ export default function Topics() {
                       item={item}
                       isExpanded={expandedItems.has(item.id)}
                       isSelected={selectedIds.has(item.id)}
+                      isGenerating={generatingItemId === item.id}
                       onToggleSelect={() => toggleSelect(item.id)}
                       onToggleExpand={() => toggleExpand(item.id)}
                       onCreateDraft={() => handleCreateDraftFromNews(item)}
@@ -362,6 +391,7 @@ interface NewsCardProps {
   item: NewsItem;
   isExpanded: boolean;
   isSelected: boolean;
+  isGenerating?: boolean;
   onToggleSelect: () => void;
   onToggleExpand: () => void;
   onCreateDraft: () => void;
@@ -370,7 +400,7 @@ interface NewsCardProps {
   t: ReturnType<typeof useTranslation>['t'];
 }
 
-function NewsCard({ item, isExpanded, isSelected, onToggleSelect, onToggleExpand, onCreateDraft, onViewDetails, onDelete, t }: NewsCardProps) {
+function NewsCard({ item, isExpanded, isSelected, isGenerating, onToggleSelect, onToggleExpand, onCreateDraft, onViewDetails, onDelete, t }: NewsCardProps) {
   const statusColors: Record<string, string> = {
     new: 'bg-primary/10 text-primary',
     used: 'bg-green-500/10 text-green-500',
@@ -494,9 +524,14 @@ function NewsCard({ item, isExpanded, isSelected, onToggleSelect, onToggleExpand
               size="sm"
               className="h-8 px-2 text-xs"
               onClick={onCreateDraft}
+              disabled={isGenerating}
             >
-              <FileEdit className="h-3 w-3 mr-1" />
-              {t.topics.createDraft}
+              {isGenerating ? (
+                <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+              ) : (
+                <FileEdit className="h-3 w-3 mr-1" />
+              )}
+              {isGenerating ? t.common.loading : t.topics.createDraft}
             </Button>
           </div>
         </div>

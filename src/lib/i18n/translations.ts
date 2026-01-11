@@ -198,6 +198,8 @@ export interface Translations {
   settingsPrompts: {
     title: string;
     description: string;
+    gptInstructions: string;
+    gptInstructionsDesc: string;
     researchSystem: string;
     researchSystemDesc: string;
     researchQuery: string;
@@ -496,6 +498,8 @@ export const translations: Record<Language, Translations> = {
     settingsPrompts: {
       title: 'AI Prompts',
       description: 'Configure prompts for research, content generation, and images',
+      gptInstructions: 'GPT Master Instructions',
+      gptInstructionsDesc: 'Your Custom GPT personality and writing guidelines for LinkedIn posts',
       researchSystem: 'AI Research System Prompt',
       researchSystemDesc: 'Instructions for finding and analyzing AI tools',
       researchQuery: 'AI Research Query',
@@ -792,6 +796,8 @@ export const translations: Record<Language, Translations> = {
     settingsPrompts: {
       title: 'פרומפטים של AI',
       description: 'הגדר פרומפטים למחקר, יצירת תוכן ותמונות',
+      gptInstructions: 'הוראות GPT ראשיות',
+      gptInstructionsDesc: 'האישיות והנחיות הכתיבה של ה-GPT המותאם אישית לפוסטים בלינקדאין',
       researchSystem: 'פרומפט מערכת למחקר AI',
       researchSystemDesc: 'הוראות לאיתור וניתוח כלי AI',
       researchQuery: 'שאילתת מחקר AI',
