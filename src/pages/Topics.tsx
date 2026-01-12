@@ -17,6 +17,7 @@ import { toast } from 'sonner';
 import { ResearchDialog } from '@/components/topics/ResearchDialog';
 import { useTranslation } from '@/hooks/useTranslation';
 import { FormattedSummary } from '@/components/topics/FormattedSummary';
+import { getContentDirection } from '@/lib/utils';
 
 export default function Topics() {
   const { t } = useTranslation();
@@ -315,14 +316,14 @@ export default function Topics() {
               <DialogTitle>{selectedItem?.title}</DialogTitle>
             </DialogHeader>
             {selectedItem && (
-              <div className="space-y-4">
+              <div className="space-y-4" dir={getContentDirection(selectedItem.summary || '')}>
                 {selectedItem.tool_name && (
                   <Badge variant="outline">{selectedItem.tool_name}</Badge>
                 )}
                 
                 <div className="space-y-2">
                   <h4 className="font-medium">{t.topics.summary}</h4>
-                  <FormattedSummary content={selectedItem.summary} />
+                  <FormattedSummary content={selectedItem.summary} detailed />
                 </div>
 
                 {selectedItem.full_content && (

@@ -1,9 +1,11 @@
 import { Badge } from '@/components/ui/badge';
 import { CheckCircle, AlertCircle, XCircle, DollarSign, Users, FileText, Calendar, Lightbulb, AlertTriangle, ThumbsUp } from 'lucide-react';
+import { getContentDirection } from '@/lib/utils';
 
 interface FormattedSummaryProps {
   content: string | null;
   compact?: boolean;
+  detailed?: boolean;
 }
 
 interface ParsedEvaluation {
@@ -18,6 +20,13 @@ interface ParsedEvaluation {
   recommendation?: string;
 }
 
+function cleanText(text: string): string {
+  return text
+    .replace(/\*\*/g, '') // Remove bold markers
+    .replace(/^\*\s*/gm, '- ') // Convert asterisk bullets to dashes
+    .trim();
+}
+
 function extractSection(content: string, sectionName: string): string | undefined {
   // Match **Section**: content or Section: content
   const patterns = [
@@ -28,7 +37,7 @@ function extractSection(content: string, sectionName: string): string | undefine
   for (const pattern of patterns) {
     const match = content.match(pattern);
     if (match && match[1]) {
-      return match[1].trim();
+      return cleanText(match[1]);
     }
   }
   return undefined;
@@ -41,12 +50,12 @@ function extractListSection(content: string, sectionName: string): string[] | un
   // Extract bullet points
   const bullets = section.match(/[-•]\s*(.+)/g);
   if (bullets) {
-    return bullets.map(b => b.replace(/^[-•]\s*/, '').trim());
+    return bullets.map(b => cleanText(b.replace(/^[-•]\s*/, '')));
   }
   
   // If no bullets, split by newlines
   const lines = section.split('\n').filter(l => l.trim());
-  return lines.length > 1 ? lines : undefined;
+  return lines.length > 1 ? lines.map(cleanText) : undefined;
 }
 
 function parseEvaluation(content: string): ParsedEvaluation | null {
@@ -113,41 +122,75 @@ function getDocBadge(documentation: string) {
   return <Badge variant="secondary">{documentation}</Badge>;
 }
 
-export function FormattedSummary({ content, compact = false }: FormattedSummaryProps) {
+export function FormattedSummary({ content, compact = false, detailed = false }: FormattedSummaryProps) {
   if (!content) return null;
 
   const parsed = parseEvaluation(content);
+  const direction = getContentDirection(content);
 
-  // Fallback: if parsing fails, show raw content
+  // Fallback: if parsing fails, show raw content (cleaned)
   if (!parsed || !parsed.summary) {
     return (
-      <p className="text-sm text-muted-foreground whitespace-pre-wrap">
-        {content}
+      <p className="text-sm text-muted-foreground line-clamp-2" dir={direction}>
+        {cleanText(content)}
       </p>
     );
   }
 
-  // Compact mode: just show summary
+  // Compact mode: 2-line summary + pricing badge only
   if (compact) {
     return (
-      <div className="space-y-2">
-        <p className="text-sm text-muted-foreground">{parsed.summary}</p>
-        <div className="flex flex-wrap gap-2">
+      <div className="space-y-2" dir={direction}>
+        <p className="text-sm text-muted-foreground line-clamp-2">{parsed.summary}</p>
+        <div className="flex flex-wrap gap-1.5">
           {parsed.pricing && getPricingBadge(parsed.pricing)}
-          {parsed.documentation && getDocBadge(parsed.documentation)}
+          {parsed.recommendation && (
+            <div className="flex items-center gap-1">
+              {getRecommendationIcon(parsed.recommendation)}
+            </div>
+          )}
         </div>
       </div>
     );
   }
 
-  // Full mode: show all sections
+  // Regular mode (expanded card): Summary + Pricing + Recommendation only
+  if (!detailed) {
+    return (
+      <div className="space-y-3 text-sm" dir={direction}>
+        <p className="text-muted-foreground">{parsed.summary}</p>
+        
+        <div className="flex flex-wrap gap-2 items-center">
+          {parsed.pricing && (
+            <div className="flex items-center gap-1.5">
+              <DollarSign className="h-3.5 w-3.5 text-muted-foreground" />
+              {getPricingBadge(parsed.pricing)}
+            </div>
+          )}
+          {parsed.documentation && (
+            <div className="flex items-center gap-1.5">
+              <FileText className="h-3.5 w-3.5 text-muted-foreground" />
+              {getDocBadge(parsed.documentation)}
+            </div>
+          )}
+        </div>
+
+        {parsed.recommendation && (
+          <div className="flex items-start gap-2 p-2 bg-muted/50 rounded-md border">
+            {getRecommendationIcon(parsed.recommendation)}
+            <span className="text-muted-foreground text-xs">{parsed.recommendation}</span>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // Detailed mode (dialog): show all sections
   return (
-    <div className="space-y-4 text-sm">
+    <div className="space-y-4 text-sm" dir={direction}>
       {/* Summary */}
       {parsed.summary && (
-        <div className="space-y-1">
-          <p className="text-muted-foreground">{parsed.summary}</p>
-        </div>
+        <p className="text-muted-foreground">{parsed.summary}</p>
       )}
 
       {/* Quick badges row */}
