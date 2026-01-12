@@ -39,11 +39,11 @@ export function useNewsResearch() {
 
   // Research new AI news
   const researchNews = useMutation({
-    mutationFn: async ({ query, count }: { query?: string; count?: number }) => {
+    mutationFn: async ({ query, count, language }: { query?: string; count?: number; language?: string }) => {
       setResearchStatus('Connecting...');
       
       const { data, error } = await supabase.functions.invoke('research-ai-news', {
-        body: { query, count },
+        body: { query, count, language },
       });
       
       if (error) throw error;

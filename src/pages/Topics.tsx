@@ -30,8 +30,8 @@ export default function Topics() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [generatingItemId, setGeneratingItemId] = useState<string | null>(null);
 
-  const handleResearch = (query?: string, count?: number) => {
-    researchNews.mutate({ query, count });
+  const handleResearch = (query?: string, count?: number, language?: string) => {
+    researchNews.mutate({ query, count, language });
     setResearchDialogOpen(false);
   };
 
@@ -304,6 +304,7 @@ export default function Topics() {
           onOpenChange={setResearchDialogOpen}
           onResearch={handleResearch}
           isResearching={isResearching}
+          contentLanguage={contentLanguage}
         />
 
         {/* Detail Dialog */}

@@ -30,25 +30,38 @@ Return ONLY a valid JSON array, no markdown formatting.`;
 
 const DEFAULT_PERPLEXITY_USER_PROMPT = `Find the latest practical AI tools. Focus on ready-to-use tools with good documentation.`;
 
-const DEFAULT_POLISH_PROMPT = `Transform this AI tool data into a polished LinkedIn post summary.
+const DEFAULT_POLISH_PROMPT = `Analyze this AI tool and provide a structured evaluation to help decide if it's worth creating content about.
 
 TOOL: {tool_name}
 DATA: {summary}
 {context}
 
-Write 2-3 SHORT paragraphs (150-200 words total):
-- Opening: One punchy sentence about the problem it solves
-- Middle: What it does and one key benefit (use specific numbers if available)
-- End: Who should try it (be specific)
+Provide the following information in a clear, scannable format:
 
-STYLE RULES:
-- Write like you're texting a smart colleague, not writing a blog
-- No buzzwords: avoid "revolutionary", "game-changer", "cutting-edge"
-- No filler phrases: avoid "This tool...", "It provides...", "You can..."
-- Start sentences with actions or results, not subjects
-- Include GitHub stars or user count if available
+**Summary**: One sentence explaining what this tool does
 
-Return ONLY the summary text. No headers, no formatting, no quotes.`;
+**Pricing**: Free / Freemium / Paid / Open-source (state if unknown)
+
+**Target Users**: Who would benefit most (be specific)
+
+**Key Use Cases**:
+- Use case 1
+- Use case 2
+- Use case 3
+
+**Documentation**: Good / Limited / None visible
+
+**Maturity**: GitHub stars, user count, or launch date if available
+
+**Differentiator**: What makes this unique vs alternatives
+
+**Concerns**: Any red flags (early stage, limited features, unclear pricing, etc.)
+
+**Recommendation**: Should this be turned into a LinkedIn post? (Yes/Maybe/No with brief reasoning)
+
+{language_instruction}
+
+Return ONLY the structured evaluation. No additional commentary.`;
 
 // Validate and fix Taaft URLs that point to category pages instead of direct tool pages
 function validateAndFixSourceUrl(url: string, toolName: string): string {
@@ -151,7 +164,7 @@ serve(async (req) => {
       );
     }
 
-    const { query, count = 5 } = await req.json();
+    const { query, count = 5, language = 'en' } = await req.json();
     
     const perplexityKey = Deno.env.get('PERPLEXITY_API_KEY');
     const firecrawlKey = Deno.env.get('FIRECRAWL_API_KEY');
@@ -318,12 +331,28 @@ serve(async (req) => {
         try {
           console.log(`Polishing summary for: ${item.title}`);
           
-          // Use the customizable polish prompt
-          const contextLine = enrichedItem.full_content ? `CONTEXT: ${enrichedItem.full_content.substring(0, 800)}` : '';
+          // Language instruction for non-English content
+          const languageNames: Record<string, string> = {
+            'en': '',
+            'he': 'Write this evaluation entirely in Hebrew.',
+            'es': 'Write this evaluation entirely in Spanish.',
+            'fr': 'Write this evaluation entirely in French.',
+            'de': 'Write this evaluation entirely in German.',
+            'ar': 'Write this evaluation entirely in Arabic.',
+            'pt': 'Write this evaluation entirely in Portuguese.',
+            'ru': 'Write this evaluation entirely in Russian.',
+            'zh': 'Write this evaluation entirely in Chinese.',
+            'ja': 'Write this evaluation entirely in Japanese.',
+          };
+          const languageInstruction = languageNames[language] || '';
+          
+          // Use the customizable polish prompt with increased context (1000 chars)
+          const contextLine = enrichedItem.full_content ? `CONTEXT: ${enrichedItem.full_content.substring(0, 1000)}` : '';
           const filledPolishPrompt = polishPrompt
             .replace('{tool_name}', item.tool_name || item.title)
             .replace('{summary}', typeof item.summary === 'object' ? JSON.stringify(item.summary) : item.summary)
-            .replace('{context}', contextLine);
+            .replace('{context}', contextLine)
+            .replace('{language_instruction}', languageInstruction);
 
           const aiPolishResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
             method: 'POST',
