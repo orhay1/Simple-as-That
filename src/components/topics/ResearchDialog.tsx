@@ -17,18 +17,19 @@ import { useTranslation } from '@/hooks/useTranslation';
 interface ResearchDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onResearch: (query?: string, count?: number) => void;
+  onResearch: (query?: string, count?: number, language?: string) => void;
   isResearching: boolean;
+  contentLanguage?: string;
 }
 
-export function ResearchDialog({ open, onOpenChange, onResearch, isResearching }: ResearchDialogProps) {
+export function ResearchDialog({ open, onOpenChange, onResearch, isResearching, contentLanguage = 'en' }: ResearchDialogProps) {
   const { t } = useTranslation();
   const [query, setQuery] = useState('');
   const [resultCount, setResultCount] = useState(2);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onResearch(query || undefined, resultCount);
+    onResearch(query || undefined, resultCount, contentLanguage);
   };
 
   // Preset queries stay in English as they are search terms
