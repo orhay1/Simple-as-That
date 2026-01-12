@@ -8,11 +8,10 @@ import { Badge } from '@/components/ui/badge';
 import { useLinkedIn } from '@/hooks/useLinkedIn';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { PromptsTab } from '@/components/settings/PromptsTab';
-import { VoiceStyleTab } from '@/components/settings/VoiceStyleTab';
 import { ImageSettingsTab } from '@/components/settings/ImageSettingsTab';
 import { GuardrailsTab } from '@/components/settings/GuardrailsTab';
 import { LanguageTab } from '@/components/settings/LanguageTab';
-import { Linkedin, FileText, Shield, CheckCircle, AlertCircle, Loader2, LogOut, Mic, Image, Globe } from 'lucide-react';
+import { Linkedin, FileText, Shield, CheckCircle, AlertCircle, Loader2, LogOut, Image, Globe } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 
@@ -50,7 +49,7 @@ export default function Settings() {
         </div>
         
         <Tabs value={tabFromUrl} onValueChange={handleTabChange} className="space-y-4">
-          <TabsList className="grid w-full grid-cols-6 lg:w-auto lg:inline-grid" dir="ltr">
+          <TabsList className="grid w-full grid-cols-5 lg:w-auto lg:inline-grid" dir="ltr">
             <TabsTrigger value="linkedin" className="gap-2">
               <Linkedin className="h-4 w-4" />
               <span className="hidden sm:inline">{t.settings.linkedin}</span>
@@ -58,10 +57,6 @@ export default function Settings() {
             <TabsTrigger value="prompts" className="gap-2">
               <FileText className="h-4 w-4" />
               <span className="hidden sm:inline">{t.settings.prompts}</span>
-            </TabsTrigger>
-            <TabsTrigger value="voice" className="gap-2">
-              <Mic className="h-4 w-4" />
-              <span className="hidden sm:inline">{t.settings.tone}</span>
             </TabsTrigger>
             <TabsTrigger value="images" className="gap-2">
               <Image className="h-4 w-4" />
@@ -161,10 +156,6 @@ export default function Settings() {
           
           <TabsContent value="prompts">
             <PromptsTab />
-          </TabsContent>
-
-          <TabsContent value="voice">
-            <VoiceStyleTab />
           </TabsContent>
 
           <TabsContent value="images">
