@@ -24,7 +24,7 @@ interface ResearchDialogProps {
 export function ResearchDialog({ open, onOpenChange, onResearch, isResearching }: ResearchDialogProps) {
   const { t } = useTranslation();
   const [query, setQuery] = useState('');
-  const [resultCount, setResultCount] = useState(5);
+  const [resultCount, setResultCount] = useState(2);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -38,6 +38,9 @@ export function ResearchDialog({ open, onOpenChange, onResearch, isResearching }
     'Open source AI projects for developers',
     'AI productivity and automation tools',
     'AI coding assistants and dev tools',
+    'AI image and video generation tools',
+    'AI writing and content creation tools',
+    'AI data analysis and visualization tools',
   ];
 
   return (
