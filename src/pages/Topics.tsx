@@ -16,6 +16,7 @@ import { Sparkles, Star, Archive, FileEdit, Trash2, Loader2, Search, Newspaper, 
 import { toast } from 'sonner';
 import { ResearchDialog } from '@/components/topics/ResearchDialog';
 import { useTranslation } from '@/hooks/useTranslation';
+import { FormattedSummary } from '@/components/topics/FormattedSummary';
 
 export default function Topics() {
   const { t } = useTranslation();
@@ -321,7 +322,7 @@ export default function Topics() {
                 
                 <div className="space-y-2">
                   <h4 className="font-medium">{t.topics.summary}</h4>
-                  <p className="text-muted-foreground">{selectedItem.summary}</p>
+                  <FormattedSummary content={selectedItem.summary} />
                 </div>
 
                 {selectedItem.full_content && (
@@ -496,11 +497,11 @@ function NewsCard({ item, isExpanded, isSelected, isGenerating, onToggleSelect, 
         </div>
       </CardHeader>
       <CardContent className="space-y-3 pl-10">
-        <div className={isExpanded ? '' : 'line-clamp-3'}>
-          <p className="text-sm text-muted-foreground">
-            {item.summary}
-          </p>
-        </div>
+        {isExpanded ? (
+          <FormattedSummary content={item.summary} />
+        ) : (
+          <FormattedSummary content={item.summary} compact />
+        )}
         
         {item.summary && item.summary.length > 150 && (
           <Button
