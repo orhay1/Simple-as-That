@@ -321,10 +321,17 @@ export default function Topics() {
                   <Badge variant="outline">{selectedItem.tool_name}</Badge>
                 )}
                 
-                <div className="space-y-2">
-                  <h4 className="font-medium">{t.topics.summary}</h4>
-                  <FormattedSummary content={selectedItem.summary} detailed />
-                </div>
+                <Collapsible defaultOpen>
+                  <CollapsibleTrigger asChild>
+                    <Button variant="ghost" className="w-full justify-between px-0 hover:bg-transparent">
+                      <h4 className="font-medium">{t.topics.summary}</h4>
+                      <ChevronDown className="h-4 w-4" />
+                    </Button>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent>
+                    <FormattedSummary content={selectedItem.summary} detailed />
+                  </CollapsibleContent>
+                </Collapsible>
 
                 {selectedItem.full_content && (
                   <Collapsible>
@@ -498,32 +505,7 @@ function NewsCard({ item, isExpanded, isSelected, isGenerating, onToggleSelect, 
         </div>
       </CardHeader>
       <CardContent className="space-y-3 pl-10">
-        {isExpanded ? (
-          <FormattedSummary content={item.summary} />
-        ) : (
-          <FormattedSummary content={item.summary} compact />
-        )}
-        
-        {item.summary && item.summary.length > 150 && (
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-6 px-2 text-xs"
-            onClick={onToggleExpand}
-          >
-            {isExpanded ? (
-              <>
-                <ChevronUp className="h-3 w-3 mr-1" />
-                {t.topics.showLess}
-              </>
-            ) : (
-              <>
-                <ChevronDown className="h-3 w-3 mr-1" />
-                {t.topics.showMore}
-              </>
-            )}
-          </Button>
-        )}
+        <FormattedSummary content={item.summary} compact />
         
         {item.tags && item.tags.length > 0 && (
           <div className="flex flex-wrap gap-1">
