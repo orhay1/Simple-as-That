@@ -1,6 +1,6 @@
 import { Badge } from '@/components/ui/badge';
 import { CheckCircle, AlertCircle, XCircle, DollarSign, Users, FileText, Calendar, Lightbulb, AlertTriangle, ThumbsUp } from 'lucide-react';
-import { getContentDirection } from '@/lib/utils';
+import { cn, getContentDirection } from '@/lib/utils';
 
 interface FormattedSummaryProps {
   content: string | null;
@@ -131,7 +131,13 @@ export function FormattedSummary({ content, compact = false, detailed = false }:
   // Fallback: if parsing fails, show raw content (cleaned)
   if (!parsed || !parsed.summary) {
     return (
-      <p className="text-sm text-muted-foreground line-clamp-2" dir={direction}>
+      <p 
+        className={cn(
+          "text-sm text-muted-foreground whitespace-pre-wrap",
+          compact && "line-clamp-2"
+        )} 
+        dir={direction}
+      >
         {cleanText(content)}
       </p>
     );
