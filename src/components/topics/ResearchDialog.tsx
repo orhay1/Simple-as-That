@@ -45,7 +45,7 @@ export function ResearchDialog({ open, onOpenChange, onResearch, isResearching }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-[700px]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Search className="h-5 w-5" />
@@ -70,14 +70,14 @@ export function ResearchDialog({ open, onOpenChange, onResearch, isResearching }
 
           <div className="space-y-2">
             <Label className="text-xs text-muted-foreground">{t.research.quickPicks}</Label>
-            <div className="flex flex-wrap gap-1.5">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
               {presetQueries.map((preset, i) => (
                 <Button
                   key={i}
                   type="button"
                   variant="outline"
                   size="sm"
-                  className="text-xs h-7"
+                  className="text-xs h-auto py-1.5 px-2 whitespace-normal text-left justify-start"
                   onClick={() => setQuery(preset)}
                   disabled={isResearching}
                 >
