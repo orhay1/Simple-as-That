@@ -175,7 +175,6 @@ export interface Translations {
     subtitle: string;
     linkedin: string;
     prompts: string;
-    tone: string;
     images: string;
     guardrails: string;
     language: string;
@@ -214,35 +213,6 @@ export interface Translations {
     hashtagGeneratorDesc: string;
     imageGenerator: string;
     imageGeneratorDesc: string;
-  };
-  settingsVoice: {
-    title: string;
-    description: string;
-    creativityPreset: string;
-    defaultTone: string;
-    ctaStyle: string;
-    jargonLevel: string;
-    emojiUsage: string;
-    maxLengthTarget: string;
-    maxLengthDesc: string;
-    selectPlaceholder: string;
-    options: {
-      conservative: string;
-      balanced: string;
-      bold: string;
-      founder: string;
-      educational: string;
-      contrarian: string;
-      story: string;
-      question: string;
-      soft: string;
-      none: string;
-      low: string;
-      medium: string;
-      high: string;
-      light: string;
-      normal: string;
-    };
   };
   settingsImages: {
     title: string;
@@ -479,7 +449,6 @@ export const translations: Record<Language, Translations> = {
       subtitle: 'Configure your content studio',
       linkedin: 'LinkedIn',
       prompts: 'Prompts',
-      tone: 'Tone',
       images: 'Images',
       guardrails: 'Guardrails',
       language: 'Language',
@@ -518,35 +487,6 @@ export const translations: Record<Language, Translations> = {
       hashtagGeneratorDesc: 'Generates relevant hashtags for posts',
       imageGenerator: 'Image Generator Prompt',
       imageGeneratorDesc: 'Creates image descriptions for AI generation',
-    },
-    settingsVoice: {
-      title: 'Voice & Style Settings',
-      description: 'Configure the tone and style for AI-generated content. These settings affect how rewrite actions and content generation behave.',
-      creativityPreset: 'Creativity Preset',
-      defaultTone: 'Default Tone',
-      ctaStyle: 'CTA Style',
-      jargonLevel: 'Jargon Level',
-      emojiUsage: 'Emoji Usage',
-      maxLengthTarget: 'Max Length Target',
-      maxLengthDesc: 'Target character count for post content',
-      selectPlaceholder: 'Select',
-      options: {
-        conservative: 'Conservative',
-        balanced: 'Balanced',
-        bold: 'Bold',
-        founder: 'Founder',
-        educational: 'Educational',
-        contrarian: 'Contrarian',
-        story: 'Story',
-        question: 'Question',
-        soft: 'Soft',
-        none: 'None',
-        low: 'Low',
-        medium: 'Medium',
-        high: 'High',
-        light: 'Light',
-        normal: 'Normal',
-      },
     },
     settingsImages: {
       title: 'Image Generation Settings',
@@ -781,7 +721,6 @@ export const translations: Record<Language, Translations> = {
       subtitle: 'הגדר את סטודיו התוכן שלך',
       linkedin: 'לינקדאין',
       prompts: 'פרומפטים',
-      tone: 'טון',
       images: 'תמונות',
       guardrails: 'מגבלות',
       language: 'שפה',
@@ -820,35 +759,6 @@ export const translations: Record<Language, Translations> = {
       hashtagGeneratorDesc: 'מייצר האשטאגים רלוונטיים לפוסטים',
       imageGenerator: 'פרומפט יצירת תמונות',
       imageGeneratorDesc: 'יוצר תיאורי תמונות ליצירה באמצעות AI',
-    },
-    settingsVoice: {
-      title: 'הגדרות קול וסגנון',
-      description: 'הגדר את הטון והסגנון לתוכן שנוצר ע"י AI. הגדרות אלו משפיעות על פעולות כתיבה מחדש ויצירת תוכן.',
-      creativityPreset: 'רמת יצירתיות',
-      defaultTone: 'טון ברירת מחדל',
-      ctaStyle: 'סגנון קריאה לפעולה',
-      jargonLevel: 'רמת ז\'רגון',
-      emojiUsage: 'שימוש באימוג\'י',
-      maxLengthTarget: 'אורך מטרה מקסימלי',
-      maxLengthDesc: 'מספר תווים מטרה לתוכן הפוסט',
-      selectPlaceholder: 'בחר',
-      options: {
-        conservative: 'שמרני',
-        balanced: 'מאוזן',
-        bold: 'נועז',
-        founder: 'מייסד',
-        educational: 'חינוכי',
-        contrarian: 'נגד הזרם',
-        story: 'סיפור',
-        question: 'שאלה',
-        soft: 'רך',
-        none: 'ללא',
-        low: 'נמוך',
-        medium: 'בינוני',
-        high: 'גבוה',
-        light: 'קל',
-        normal: 'רגיל',
-      },
     },
     settingsImages: {
       title: 'הגדרות יצירת תמונות',
