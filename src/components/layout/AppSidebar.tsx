@@ -9,7 +9,7 @@ import {
   Settings, 
   LogOut
 } from 'lucide-react';
-import logoImage from '@/assets/logo.jpeg';
+import logoImage from '@/assets/logo.png';
 import { NavLink as RouterNavLink, useLocation } from 'react-router-dom';
 import {
   Sidebar,
