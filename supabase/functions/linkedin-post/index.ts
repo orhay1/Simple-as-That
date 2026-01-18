@@ -329,6 +329,7 @@ serve(async (req) => {
               image_description: draft.image_description,
               language: draft.language || 'en',
             },
+            user_id: user.id,
           });
       }
     }

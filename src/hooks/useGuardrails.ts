@@ -1,9 +1,11 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface Guardrails {
   id: string;
+  user_id: string;
   banned_phrases: string[] | null;
   required_disclaimers: string[] | null;
   no_clickbait: boolean | null;
@@ -31,6 +33,7 @@ interface AISuggestions {
 
 export function useGuardrails() {
   const queryClient = useQueryClient();
+  const { user } = useAuth();
 
   const { data: guardrails, isLoading } = useQuery({
     queryKey: ['guardrails'],
@@ -48,6 +51,8 @@ export function useGuardrails() {
 
   const updateGuardrails = useMutation({
     mutationFn: async (updates: GuardrailsUpdate) => {
+      if (!user) throw new Error('User not authenticated');
+      
       if (guardrails?.id) {
         const { data, error } = await supabase
           .from('guardrails')
@@ -61,7 +66,7 @@ export function useGuardrails() {
       } else {
         const { data, error } = await supabase
           .from('guardrails')
-          .insert(updates)
+          .insert({ ...updates, user_id: user.id })
           .select()
           .single();
         

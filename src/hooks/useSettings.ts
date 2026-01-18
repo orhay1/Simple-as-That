@@ -2,9 +2,11 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Settings } from '@/types/database';
 import { toast } from 'sonner';
+import { useAuth } from '@/contexts/AuthContext';
 
 export function useSettings() {
   const queryClient = useQueryClient();
+  const { user } = useAuth();
 
   const { data: settings = [], isLoading, error } = useQuery({
     queryKey: ['settings'],
@@ -51,6 +53,8 @@ export function useSettings() {
 
   const upsertSetting = useMutation({
     mutationFn: async ({ key, value }: { key: string; value: any }) => {
+      if (!user) throw new Error('User not authenticated');
+      
       const existingSetting = settings.find(s => s.key === key);
       
       if (existingSetting) {
@@ -66,7 +70,7 @@ export function useSettings() {
       } else {
         const { data, error } = await supabase
           .from('settings')
-          .insert({ key, value: JSON.stringify(value) })
+          .insert({ key, value: JSON.stringify(value), user_id: user.id })
           .select()
           .single();
         

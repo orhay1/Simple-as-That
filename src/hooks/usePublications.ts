@@ -2,9 +2,11 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Publication } from '@/types/database';
 import { toast } from 'sonner';
+import { useAuth } from '@/contexts/AuthContext';
 
 export function usePublications() {
   const queryClient = useQueryClient();
+  const { user } = useAuth();
 
   const { data: publications = [], isLoading, error } = useQuery({
     queryKey: ['publications'],
@@ -21,9 +23,11 @@ export function usePublications() {
 
   const createPublication = useMutation({
     mutationFn: async (publication: { post_draft_id?: string; final_content: Record<string, any>; published_url?: string; likes?: number; comments?: number; impressions?: number; notes?: string; is_manual_publish?: boolean }) => {
+      if (!user) throw new Error('User not authenticated');
+      
       const { data, error } = await supabase
         .from('publications')
-        .insert([publication])
+        .insert([{ ...publication, user_id: user.id }])
         .select()
         .single();
       
@@ -42,9 +46,11 @@ export function usePublications() {
 
   const updatePublication = useMutation({
     mutationFn: async ({ id, ...updates }: Partial<Publication> & { id: string }) => {
+      // Remove user_id from updates
+      const { user_id, ...dbUpdates } = updates as any;
       const { data, error } = await supabase
         .from('publications')
-        .update(updates)
+        .update(dbUpdates)
         .eq('id', id)
         .select()
         .single();

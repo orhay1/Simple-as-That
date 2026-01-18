@@ -495,6 +495,7 @@ serve(async (req) => {
       status: 'new',
       raw_perplexity_response: item.raw_perplexity_response,
       raw_firecrawl_response: item.raw_firecrawl_response,
+      user_id: user.id,
     }));
 
     const { data: savedItems, error: insertError } = await supabase
