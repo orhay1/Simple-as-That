@@ -198,7 +198,7 @@ async function extractImageFromUrl(url: string): Promise<string | null> {
   }
 }
 
-async function downloadAndStoreImage(imageUrl: string, draftId: string): Promise<{ assetId: string; fileUrl: string } | null> {
+async function downloadAndStoreImage(imageUrl: string, draftId: string, userId: string): Promise<{ assetId: string; fileUrl: string } | null> {
   console.log(`Downloading image: ${imageUrl}`);
   
   try {
@@ -260,6 +260,7 @@ async function downloadAndStoreImage(imageUrl: string, draftId: string): Promise
           draft_id: draftId,
           fetched_at: new Date().toISOString(),
         },
+        user_id: userId,
       })
       .select()
       .single();
@@ -346,7 +347,7 @@ serve(async (req) => {
     }
 
     // Download and store the image
-    const result = await downloadAndStoreImage(imageUrl, draft_id);
+    const result = await downloadAndStoreImage(imageUrl, draft_id, user.id);
 
     if (!result) {
       return new Response(JSON.stringify({ 
@@ -358,11 +359,12 @@ serve(async (req) => {
       });
     }
 
-    // Update the draft with the new asset
+    // Update the draft with the new asset (only if user owns the draft)
     const { error: updateError } = await supabase
       .from('post_drafts')
       .update({ image_asset_id: result.assetId })
-      .eq('id', draft_id);
+      .eq('id', draft_id)
+      .eq('user_id', user.id);
 
     if (updateError) {
       console.error('Failed to update draft:', updateError);
