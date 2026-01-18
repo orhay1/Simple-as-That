@@ -66,7 +66,7 @@ export const AppSidebar = React.forwardRef<
           {!collapsed && (
             <div className="flex flex-col">
               <span className="font-semibold text-sidebar-foreground">Simple as That</span>
-              <span className="text-xs text-sidebar-foreground/60">Content Studio</span>
+              <span className="text-xs text-sidebar-foreground/60">LinkedIn Content Creator</span>
             </div>
           )}
         </div>
