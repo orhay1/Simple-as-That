@@ -208,12 +208,13 @@ serve(async (req) => {
     
     console.log(`Generating image for user ${user.id}, prompt length: ${prompt.length}`);
 
-    // Fetch image model from settings
+    // Fetch image model from user's settings
     const { data: modelSetting } = await supabase
       .from('settings')
       .select('value')
       .eq('key', 'image_generation_model')
-      .single();
+      .eq('user_id', user.id)
+      .maybeSingle();
 
     // Parse the model value - it may be stored as a JSON string with quotes
     let selectedModel = DEFAULT_IMAGE_MODEL;
