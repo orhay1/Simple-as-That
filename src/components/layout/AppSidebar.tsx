@@ -7,9 +7,9 @@ import {
   Calendar, 
   BarChart3, 
   Settings, 
-  LogOut,
-  Zap
+  LogOut
 } from 'lucide-react';
+import logoImage from '@/assets/logo.jpeg';
 import { NavLink as RouterNavLink, useLocation } from 'react-router-dom';
 import {
   Sidebar,
@@ -60,8 +60,8 @@ export const AppSidebar = React.forwardRef<
     <Sidebar ref={ref} side={isRTL ? 'right' : 'left'} className={cn(collapsed ? 'w-16' : 'w-64', 'transition-all duration-200')} {...props}>
       <SidebarHeader className="border-b border-sidebar-border p-4">
         <div className="flex items-center gap-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-            <Zap className="h-5 w-5" />
+          <div className="flex h-9 w-9 items-center justify-center rounded-full overflow-hidden">
+            <img src={logoImage} alt="Simple as That" className="h-12 w-12 object-cover object-center" />
           </div>
           {!collapsed && (
             <div className="flex flex-col">
