@@ -11,6 +11,85 @@ const LINKEDIN_CLIENT_SECRET = Deno.env.get('LINKEDIN_CLIENT_SECRET')!;
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
+// Input validation utilities
+interface ValidationResult {
+  valid: boolean;
+  error?: string;
+  sanitized?: any;
+}
+
+function validatePostContent(content: unknown): ValidationResult {
+  if (typeof content !== 'string') {
+    return { valid: false, error: 'Content must be a string' };
+  }
+  
+  if (content.length === 0) {
+    return { valid: false, error: 'Content cannot be empty' };
+  }
+  
+  // LinkedIn limit: 3000 characters
+  if (content.length > 3000) {
+    return { valid: false, error: 'Content exceeds LinkedIn limit (3000 chars)' };
+  }
+  
+  // Remove control characters except newline and tab
+  const sanitized = content.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '');
+  
+  return { valid: true, sanitized };
+}
+
+function validateHashtags(hashtags: unknown): ValidationResult {
+  if (hashtags === undefined || hashtags === null) {
+    return { valid: true, sanitized: [] };
+  }
+  
+  if (!Array.isArray(hashtags)) {
+    return { valid: false, error: 'Hashtags must be an array' };
+  }
+  
+  if (hashtags.length > 30) {
+    return { valid: false, error: 'Too many hashtags (max 30)' };
+  }
+  
+  const sanitized: string[] = [];
+  for (const tag of hashtags) {
+    if (typeof tag !== 'string') {
+      return { valid: false, error: 'Each hashtag must be a string' };
+    }
+    
+    if (tag.length > 100) {
+      return { valid: false, error: 'Hashtag too long (max 100 chars)' };
+    }
+    
+    // Allow only alphanumeric, spaces, hyphens, underscores, and hash symbol
+    if (!/^[#]?[\w\s\-]+$/i.test(tag)) {
+      return { valid: false, error: 'Hashtag contains invalid characters' };
+    }
+    
+    sanitized.push(tag);
+  }
+  
+  return { valid: true, sanitized };
+}
+
+function validateDraftId(draftId: unknown): ValidationResult {
+  if (draftId === undefined || draftId === null) {
+    return { valid: true, sanitized: null };
+  }
+  
+  if (typeof draftId !== 'string') {
+    return { valid: false, error: 'Draft ID must be a string' };
+  }
+  
+  // Validate UUID format
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  if (!uuidRegex.test(draftId)) {
+    return { valid: false, error: 'Invalid draft ID format' };
+  }
+  
+  return { valid: true, sanitized: draftId };
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -107,21 +186,54 @@ serve(async (req) => {
       console.log('Token refreshed successfully');
     }
 
-    // Get post content from request body
-    const { content, draftId, hashtags } = await req.json();
+    // Get and validate post content from request body
+    const requestBody = await req.json();
+    const { content, draftId, hashtags } = requestBody;
     
-    if (!content) {
-      return new Response(JSON.stringify({ error: 'Content is required' }), {
+    // Validate content
+    const contentValidation = validatePostContent(content);
+    if (!contentValidation.valid) {
+      return new Response(JSON.stringify({ error: contentValidation.error }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Validate hashtags
+    const hashtagValidation = validateHashtags(hashtags);
+    if (!hashtagValidation.valid) {
+      return new Response(JSON.stringify({ error: hashtagValidation.error }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Validate draftId
+    const draftIdValidation = validateDraftId(draftId);
+    if (!draftIdValidation.valid) {
+      return new Response(JSON.stringify({ error: draftIdValidation.error }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
     // Build full post text with hashtags
-    let fullContent = content;
-    if (hashtags && hashtags.length > 0) {
-      const hashtagString = hashtags.map((tag: string) => tag.startsWith('#') ? tag : `#${tag}`).join(' ');
-      fullContent = `${content}\n\n${hashtagString}`;
+    let fullContent = contentValidation.sanitized!;
+    const validatedHashtags = hashtagValidation.sanitized || [];
+    
+    if (validatedHashtags.length > 0) {
+      const hashtagString = validatedHashtags
+        .map((tag: string) => tag.startsWith('#') ? tag : `#${tag}`)
+        .join(' ');
+      fullContent = `${contentValidation.sanitized}\n\n${hashtagString}`;
+    }
+    
+    // Final length check after adding hashtags
+    if (fullContent.length > 3000) {
+      return new Response(JSON.stringify({ error: 'Combined content with hashtags exceeds LinkedIn limit (3000 chars)' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
     console.log('Posting to LinkedIn...');
@@ -170,7 +282,8 @@ serve(async (req) => {
     const postUrl = `https://www.linkedin.com/feed/update/${postId}`;
 
     // Update draft status and create publication record if draftId provided
-    if (draftId) {
+    const validatedDraftId = draftIdValidation.sanitized;
+    if (validatedDraftId) {
       // Update draft status to published
       await supabase
         .from('post_drafts')
@@ -179,13 +292,13 @@ serve(async (req) => {
           published_url: postUrl,
           updated_at: new Date().toISOString(),
         })
-        .eq('id', draftId);
+        .eq('id', validatedDraftId);
 
       // Get the draft for publication record
       const { data: draft } = await supabase
         .from('post_drafts')
         .select('*')
-        .eq('id', draftId)
+        .eq('id', validatedDraftId)
         .single();
 
       if (draft) {
@@ -204,7 +317,7 @@ serve(async (req) => {
         await supabase
           .from('publications')
           .insert({
-            post_draft_id: draftId,
+            post_draft_id: validatedDraftId,
             published_url: postUrl,
             is_manual_publish: false,
             published_at: new Date().toISOString(),

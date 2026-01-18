@@ -17,6 +17,57 @@ const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
 const DEFAULT_IMAGE_MODEL = 'google/gemini-3-pro-image-preview';
 
+// Input validation
+interface ValidationResult {
+  valid: boolean;
+  error?: string;
+  sanitized?: string;
+}
+
+function validatePrompt(prompt: unknown): ValidationResult {
+  if (typeof prompt !== 'string') {
+    return { valid: false, error: 'Prompt must be a string' };
+  }
+  
+  if (prompt.length === 0) {
+    return { valid: false, error: 'Prompt cannot be empty' };
+  }
+  
+  // Limit prompt length to prevent abuse
+  if (prompt.length > 2000) {
+    return { valid: false, error: 'Prompt too long (max 2000 chars)' };
+  }
+  
+  // Remove control characters
+  const sanitized = prompt
+    .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '')
+    .trim();
+  
+  if (sanitized.length === 0) {
+    return { valid: false, error: 'Prompt cannot be empty after sanitization' };
+  }
+  
+  return { valid: true, sanitized };
+}
+
+function validateDraftId(draftId: unknown): ValidationResult {
+  if (draftId === undefined || draftId === null) {
+    return { valid: true, sanitized: undefined };
+  }
+  
+  if (typeof draftId !== 'string') {
+    return { valid: false, error: 'Draft ID must be a string' };
+  }
+  
+  // Validate UUID format
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  if (!uuidRegex.test(draftId)) {
+    return { valid: false, error: 'Invalid draft ID format' };
+  }
+  
+  return { valid: true, sanitized: draftId };
+}
+
 interface GenerateImageRequest {
   prompt: string;
   draft_id?: string;
@@ -146,12 +197,30 @@ serve(async (req) => {
       });
     }
 
-    const { prompt, draft_id }: GenerateImageRequest = await req.json();
-    console.log(`Generating image for user ${user.id}, prompt:`, prompt);
-
-    if (!prompt) {
-      throw new Error('Prompt is required');
+    const requestBody: GenerateImageRequest = await req.json();
+    
+    // Validate prompt
+    const promptValidation = validatePrompt(requestBody.prompt);
+    if (!promptValidation.valid) {
+      return new Response(JSON.stringify({ error: promptValidation.error }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
+    
+    // Validate draft_id
+    const draftIdValidation = validateDraftId(requestBody.draft_id);
+    if (!draftIdValidation.valid) {
+      return new Response(JSON.stringify({ error: draftIdValidation.error }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+    
+    const prompt = promptValidation.sanitized!;
+    const draft_id = draftIdValidation.sanitized;
+    
+    console.log(`Generating image for user ${user.id}, prompt length: ${prompt.length}`);
 
     // Fetch image model from settings
     const { data: modelSetting } = await supabase

@@ -6,6 +6,70 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Input validation utilities
+interface ValidationResult {
+  valid: boolean;
+  error?: string;
+  sanitized?: any;
+}
+
+function validateQuery(query: unknown): ValidationResult {
+  if (query === undefined || query === null) {
+    return { valid: true, sanitized: null };
+  }
+  
+  if (typeof query !== 'string') {
+    return { valid: false, error: 'Query must be a string' };
+  }
+  
+  // Limit query length
+  if (query.length > 1000) {
+    return { valid: false, error: 'Query too long (max 1000 chars)' };
+  }
+  
+  // Remove control characters
+  const sanitized = query
+    .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '')
+    .trim();
+  
+  return { valid: true, sanitized: sanitized || null };
+}
+
+function validateCount(count: unknown): ValidationResult {
+  if (count === undefined || count === null) {
+    return { valid: true, sanitized: 5 };
+  }
+  
+  const numCount = Number(count);
+  if (!Number.isInteger(numCount)) {
+    return { valid: false, error: 'Count must be an integer' };
+  }
+  
+  if (numCount < 1 || numCount > 20) {
+    return { valid: false, error: 'Count must be between 1 and 20' };
+  }
+  
+  return { valid: true, sanitized: numCount };
+}
+
+function validateLanguage(lang: unknown): ValidationResult {
+  const allowed = ['en', 'he', 'es', 'fr', 'de', 'ar', 'pt', 'ru', 'zh', 'ja'];
+  
+  if (lang === undefined || lang === null) {
+    return { valid: true, sanitized: 'en' };
+  }
+  
+  if (typeof lang !== 'string') {
+    return { valid: false, error: 'Language must be a string' };
+  }
+  
+  if (!allowed.includes(lang)) {
+    return { valid: false, error: `Invalid language code. Allowed: ${allowed.join(', ')}` };
+  }
+  
+  return { valid: true, sanitized: lang };
+}
+
 // Improved default prompts focused on practical AI tools
 const DEFAULT_PERPLEXITY_SYSTEM_PROMPT = `You are an expert AI tools researcher. Find practical AI tools that developers and professionals can use immediately.
 
@@ -164,7 +228,36 @@ serve(async (req) => {
       );
     }
 
-    const { query, count = 5, language = 'en' } = await req.json();
+    const requestBody = await req.json();
+    
+    // Validate inputs
+    const queryValidation = validateQuery(requestBody.query);
+    if (!queryValidation.valid) {
+      return new Response(
+        JSON.stringify({ success: false, error: queryValidation.error }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    
+    const countValidation = validateCount(requestBody.count);
+    if (!countValidation.valid) {
+      return new Response(
+        JSON.stringify({ success: false, error: countValidation.error }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    
+    const languageValidation = validateLanguage(requestBody.language);
+    if (!languageValidation.valid) {
+      return new Response(
+        JSON.stringify({ success: false, error: languageValidation.error }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    
+    const query = queryValidation.sanitized;
+    const count = countValidation.sanitized;
+    const language = languageValidation.sanitized;
     
     const perplexityKey = Deno.env.get('PERPLEXITY_API_KEY');
     const firecrawlKey = Deno.env.get('FIRECRAWL_API_KEY');
@@ -177,7 +270,7 @@ serve(async (req) => {
       );
     }
 
-    console.log(`Research initiated by user ${user.id}`);
+    console.log(`Research initiated by user ${user.id}, count: ${count}, language: ${language}`);
 
     // Fetch custom prompts from settings
     console.log('Fetching custom prompts from settings...');

@@ -6,6 +6,33 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Input validation
+function validateContext(context: unknown): { valid: boolean; error?: string; sanitized?: string } {
+  if (typeof context !== 'string') {
+    return { valid: false, error: 'Context must be a string' };
+  }
+  
+  if (context.length === 0) {
+    return { valid: false, error: 'Context cannot be empty' };
+  }
+  
+  // Limit context length to prevent token abuse
+  if (context.length > 5000) {
+    return { valid: false, error: 'Context too long (max 5000 chars)' };
+  }
+  
+  // Remove control characters
+  const sanitized = context
+    .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '')
+    .trim();
+  
+  if (sanitized.length === 0) {
+    return { valid: false, error: 'Context cannot be empty after sanitization' };
+  }
+  
+  return { valid: true, sanitized };
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -52,21 +79,25 @@ serve(async (req) => {
       });
     }
 
-    const { context } = await req.json();
+    const requestBody = await req.json();
     
-    if (!context) {
+    // Validate context input
+    const contextValidation = validateContext(requestBody.context);
+    if (!contextValidation.valid) {
       return new Response(
-        JSON.stringify({ error: 'Context is required' }),
+        JSON.stringify({ error: contextValidation.error }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+    
+    const context = contextValidation.sanitized!;
 
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
     if (!LOVABLE_API_KEY) {
       throw new Error('LOVABLE_API_KEY is not configured');
     }
 
-    console.log(`Processing suggest-guardrails request for user ${user.id}`);
+    console.log(`Processing suggest-guardrails request for user ${user.id}, context length: ${context.length}`);
 
     const systemPrompt = `You are an expert content strategist helping define guardrails for professional content creation.
 Based on the user's context (industry, audience, goals), suggest:
@@ -144,7 +175,7 @@ Be specific and practical. Focus on quality and professionalism.`;
     }
 
     const data = await response.json();
-    console.log('AI response:', JSON.stringify(data, null, 2));
+    console.log('AI response received');
 
     const toolCall = data.choices?.[0]?.message?.tool_calls?.[0];
     if (!toolCall || toolCall.function.name !== 'suggest_guardrails') {
