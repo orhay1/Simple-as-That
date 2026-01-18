@@ -139,9 +139,13 @@ export interface Translations {
       educational: string;
       contrarian: string;
       storyMode: string;
+      translateTo: string;
+      translateHebrew: string;
+      translateEnglish: string;
     };
-    language: string;
-    selectLanguage: string;
+    versionHistory: string;
+    original: string;
+    noVersions: string;
   };
   assets: {
     title: string;
@@ -413,9 +417,13 @@ export const translations: Record<Language, Translations> = {
         educational: 'Educational',
         contrarian: 'Contrarian',
         storyMode: 'Story Mode',
+        translateTo: 'Translate',
+        translateHebrew: '🇮🇱 Hebrew',
+        translateEnglish: '🇺🇸 English',
       },
-      language: 'Language',
-      selectLanguage: 'Select language',
+      versionHistory: 'Version History',
+      original: 'Original',
+      noVersions: 'No versions yet',
     },
     assets: {
       title: 'Assets',
@@ -685,9 +693,13 @@ export const translations: Record<Language, Translations> = {
         educational: 'חינוכי',
         contrarian: 'נגד הזרם',
         storyMode: 'סיפור',
+        translateTo: 'תרגם',
+        translateHebrew: '🇮🇱 עברית',
+        translateEnglish: '🇺🇸 אנגלית',
       },
-      language: 'שפה',
-      selectLanguage: 'בחר שפה',
+      versionHistory: 'היסטוריית גרסאות',
+      original: 'מקורי',
+      noVersions: 'אין עדיין גרסאות',
     },
     assets: {
       title: 'נכסים',

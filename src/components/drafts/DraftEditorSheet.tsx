@@ -12,16 +12,17 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator, DropdownMenuLabel } from '@/components/ui/dropdown-menu';
 import { LinkedInPostPreview } from './LinkedInPostPreview';
 import { AssetPickerDialog } from './AssetPickerDialog';
-import { PostDraftWithAsset } from '@/types/database';
+import { PostDraftWithAsset, DraftVersion } from '@/types/database';
 import { Asset } from '@/types/database';
 import { Language } from '@/lib/i18n/translations';
-import { Wand2, Hash, Image, RotateCcw, ChevronDown, Loader2, Save, FolderOpen, Settings, Globe, Languages, Search, Sparkles } from 'lucide-react';
+import { Wand2, Hash, Image, RotateCcw, ChevronDown, Loader2, Save, FolderOpen, Settings, Globe, History, Search, Sparkles } from 'lucide-react';
+import { format } from 'date-fns';
 
 interface DraftEditorSheetProps {
   draft: PostDraftWithAsset | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSave: (data: { title: string; body: string; image_description?: string; language?: string }) => void;
+  onSave: (data: { title: string; body: string; image_description?: string; language?: string; versions?: DraftVersion[] }) => void;
   onRewrite: (body: string, action: string, language?: string) => void;
   onRetrieveHashtagsFromResearch: () => void;
   onGenerateHashtagsFree: (title: string, body: string) => void;
@@ -62,6 +63,8 @@ export function DraftEditorSheet({
   const [body, setBody] = useState('');
   const [imageDescription, setImageDescription] = useState('');
   const [draftLanguage, setDraftLanguage] = useState<Language>('en');
+  const [versions, setVersions] = useState<DraftVersion[]>([]);
+  const [selectedVersionId, setSelectedVersionId] = useState<string | null>(null);
   const [showAssetPicker, setShowAssetPicker] = useState(false);
   const isMobile = useIsMobile();
   const navigate = useNavigate();
@@ -78,13 +81,35 @@ export function DraftEditorSheet({
       setBody(draft.body);
       setImageDescription(draft.image_description || '');
       setDraftLanguage((draft.language as Language) || contentLanguage);
+      
+      // Load versions from draft
+      const draftVersions = (draft.versions as DraftVersion[]) || [];
+      setVersions(draftVersions);
+      setSelectedVersionId(null);
     } else if (open && !draft) {
       setDraftLanguage(contentLanguage);
+      setVersions([]);
+      setSelectedVersionId(null);
     }
   }, [open, draft?.id, contentLanguage]);
 
   const handleSave = () => {
-    onSave({ title, body, image_description: imageDescription || undefined, language: draftLanguage });
+    onSave({ 
+      title, 
+      body, 
+      image_description: imageDescription || undefined, 
+      language: draftLanguage,
+      versions 
+    });
+  };
+
+  const handleVersionSelect = (versionId: string) => {
+    setSelectedVersionId(versionId);
+    const version = versions.find(v => v.id === versionId);
+    if (version) {
+      setBody(version.body);
+      setDraftLanguage(version.language as Language);
+    }
   };
 
   const allHashtags = [
@@ -95,6 +120,8 @@ export function DraftEditorSheet({
 
   // Get the image URL from the joined asset
   const imageUrl = draft?.image_asset?.file_url || undefined;
+
+  const hasMultipleVersions = versions.length > 1;
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -129,23 +156,6 @@ export function DraftEditorSheet({
                 onChange={(e) => setTitle(e.target.value)} 
                 placeholder="Post title (internal reference)"
               />
-            </div>
-
-            {/* Language Selector */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-foreground flex items-center gap-2">
-                <Languages className="h-4 w-4" />
-                {t.drafts.language}
-              </label>
-              <Select value={draftLanguage} onValueChange={(v) => setDraftLanguage(v as Language)}>
-                <SelectTrigger className="w-full max-w-[200px]">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="en">{t.settings.english}</SelectItem>
-                  <SelectItem value="he">{t.settings.hebrew}</SelectItem>
-                </SelectContent>
-              </Select>
             </div>
 
             <div className="space-y-2">
@@ -202,8 +212,43 @@ export function DraftEditorSheet({
                     <DropdownMenuItem onClick={() => onRewrite(body, 'educational_tone', draftLanguage)}>{t.drafts.rewriteOptions.educational}</DropdownMenuItem>
                     <DropdownMenuItem onClick={() => onRewrite(body, 'contrarian_tone', draftLanguage)}>{t.drafts.rewriteOptions.contrarian}</DropdownMenuItem>
                     <DropdownMenuItem onClick={() => onRewrite(body, 'story_tone', draftLanguage)}>{t.drafts.rewriteOptions.storyMode}</DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuLabel>{t.drafts.rewriteOptions.translateTo}</DropdownMenuLabel>
+                    <DropdownMenuItem onClick={() => onRewrite(body, 'translate_he', 'he')}>{t.drafts.rewriteOptions.translateHebrew}</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => onRewrite(body, 'translate_en', 'en')}>{t.drafts.rewriteOptions.translateEnglish}</DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
+
+                {/* Version History Dropdown */}
+                <Select 
+                  value={selectedVersionId || ''} 
+                  onValueChange={handleVersionSelect}
+                  disabled={!hasMultipleVersions}
+                >
+                  <SelectTrigger className={cn(
+                    "w-[180px] h-8 text-sm",
+                    !hasMultipleVersions && "opacity-50 cursor-not-allowed"
+                  )}>
+                    <History className="me-1 h-3 w-3" />
+                    <SelectValue placeholder={t.drafts.versionHistory} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {versions.length === 0 ? (
+                      <SelectItem value="none" disabled>{t.drafts.noVersions}</SelectItem>
+                    ) : (
+                      versions.map((version) => (
+                        <SelectItem key={version.id} value={version.id}>
+                          <div className="flex flex-col">
+                            <span>{version.label}</span>
+                            <span className="text-xs text-muted-foreground">
+                              {format(new Date(version.created_at), 'MMM d, HH:mm')}
+                            </span>
+                          </div>
+                        </SelectItem>
+                      ))
+                    )}
+                  </SelectContent>
+                </Select>
 
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>

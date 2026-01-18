@@ -1,5 +1,13 @@
 // Custom types extending Supabase generated types
 
+export interface DraftVersion {
+  id: string;
+  label: string;
+  body: string;
+  language: string;
+  created_at: string;
+}
+
 export type AppRole = 'user' | 'admin';
 export type TopicStatus = 'new' | 'shortlisted' | 'archived';
 export type PostStatus = 'draft' | 'approved' | 'scheduled' | 'published';

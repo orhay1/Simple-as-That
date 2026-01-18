@@ -15,8 +15,31 @@ import { usePublications } from '@/hooks/usePublications';
 import { useTranslation } from '@/hooks/useTranslation';
 import { DraftEditorSheet } from '@/components/drafts/DraftEditorSheet';
 import { Plus, Edit, Trash2, CheckCircle, Send, Loader2, ChevronDown, Link, Linkedin } from 'lucide-react';
-import { PostStatus, PostDraftWithAsset } from '@/types/database';
+import { PostStatus, PostDraftWithAsset, DraftVersion } from '@/types/database';
 import { toast } from 'sonner';
+
+// Map rewrite action to version label
+const getVersionLabel = (action: string): string => {
+  const labels: Record<string, string> = {
+    tighten: 'Tighten',
+    expand: 'Expand',
+    add_cta: 'Add CTA',
+    founder_tone: 'Founder Voice',
+    educational_tone: 'Educational',
+    contrarian_tone: 'Contrarian',
+    story_tone: 'Story Mode',
+    translate_he: 'Translate to Hebrew',
+    translate_en: 'Translate to English',
+  };
+  return labels[action] || action;
+};
+
+// Detect target language from translate action
+const getTargetLanguage = (action: string): string | null => {
+  if (action === 'translate_he') return 'he';
+  if (action === 'translate_en') return 'en';
+  return null;
+};
 
 export default function Drafts() {
   const { drafts, createDraft, updateDraft, updateDraftStatus, deleteDraft } = useDrafts();
@@ -45,7 +68,7 @@ export default function Drafts() {
     setDialogOpen(false);
   };
 
-  const handleSave = (data: { title: string; body: string; image_description?: string; language?: string }) => {
+  const handleSave = (data: { title: string; body: string; image_description?: string; language?: string; versions?: DraftVersion[] }) => {
     if (!editDraft) return;
     updateDraft.mutate({ id: editDraft.id, ...data });
     setEditorOpen(false);
@@ -53,22 +76,79 @@ export default function Drafts() {
   };
 
   const openEditor = (draft: PostDraftWithAsset) => {
-    setEditDraft(draft);
+    // Initialize "Original" version if no versions exist
+    const currentVersions = (draft.versions as DraftVersion[]) || [];
+    
+    if (currentVersions.length === 0) {
+      const originalVersion: DraftVersion = {
+        id: crypto.randomUUID(),
+        label: t.drafts.original,
+        body: draft.body,
+        language: draft.language || 'en',
+        created_at: draft.created_at,
+      };
+      
+      // Update draft with original version
+      updateDraft.mutate({ 
+        id: draft.id, 
+        versions: [originalVersion] 
+      });
+      
+      setEditDraft({
+        ...draft,
+        versions: [originalVersion],
+      });
+    } else {
+      setEditDraft(draft);
+    }
+    
     setEditorOpen(true);
   };
 
   const handleRewrite = (body: string, action: string, language?: string) => {
     if (!editDraft) return;
+    
     generateContent.mutate(
       { type: 'rewrite', inputs: { body, action, language } },
       {
         onSuccess: (data) => {
           if (data.rewritten) {
+            // Get current versions
+            const currentVersions = (editDraft.versions as DraftVersion[]) || [];
+            
+            // Create new version entry
+            const newVersion: DraftVersion = {
+              id: crypto.randomUUID(),
+              label: getVersionLabel(action),
+              body: data.rewritten,
+              language: getTargetLanguage(action) || language || editDraft.language || 'en',
+              created_at: new Date().toISOString(),
+            };
+            
+            const updatedVersions = [...currentVersions, newVersion];
+            
+            // Detect if this is a translation and update language accordingly
+            const targetLang = getTargetLanguage(action);
+            const updatePayload: { id: string; body: string; versions: DraftVersion[]; language?: string } = { 
+              id: editDraft.id, 
+              body: data.rewritten,
+              versions: updatedVersions,
+            };
+            
+            if (targetLang) {
+              updatePayload.language = targetLang;
+            }
+            
             updateDraft.mutate(
-              { id: editDraft.id, body: data.rewritten },
+              updatePayload,
               {
                 onSuccess: () => {
-                  setEditDraft(prev => prev ? { ...prev, body: data.rewritten } : null);
+                  setEditDraft(prev => prev ? { 
+                    ...prev, 
+                    body: data.rewritten,
+                    versions: updatedVersions,
+                    language: targetLang || prev.language,
+                  } : null);
                 }
               }
             );
