@@ -285,6 +285,7 @@ serve(async (req) => {
         prompt: prompt,
         is_ai_generated: true,
         metadata: { model: selectedModel, storage_path: fileName },
+        user_id: user.id,
       })
       .select()
       .single();

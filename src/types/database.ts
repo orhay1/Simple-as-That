@@ -19,6 +19,7 @@ export type CreativityPreset = 'conservative' | 'balanced' | 'bold';
 
 export interface TopicIdea {
   id: string;
+  user_id: string;
   title: string;
   rationale: string | null;
   hook: string | null;
@@ -31,6 +32,7 @@ export interface TopicIdea {
 
 export interface PostDraft {
   id: string;
+  user_id: string;
   topic_id: string | null;
   news_item_id: string | null;
   title: string;
@@ -60,6 +62,7 @@ export interface PostDraftWithAsset extends PostDraft {
 
 export interface Asset {
   id: string;
+  user_id: string;
   file_url: string | null;
   prompt: string | null;
   metadata: Record<string, any>;
@@ -69,6 +72,7 @@ export interface Asset {
 
 export interface Publication {
   id: string;
+  user_id: string;
   post_draft_id: string | null;
   final_content: Record<string, any>;
   published_url: string | null;
@@ -99,6 +103,7 @@ export interface AIOutputLedger {
 
 export interface VoiceProfile {
   id: string;
+  user_id: string;
   name: string;
   tone_rules: string | null;
   dos: string | null;
@@ -112,6 +117,7 @@ export interface VoiceProfile {
 
 export interface Guardrails {
   id: string;
+  user_id: string;
   banned_phrases: string[] | null;
   required_disclaimers: string[] | null;
   allow_links: boolean;
@@ -125,6 +131,7 @@ export interface Guardrails {
 
 export interface PostTemplate {
   id: string;
+  user_id: string;
   name: string;
   description: string | null;
   skeleton: string;
@@ -144,14 +151,36 @@ export interface Profile {
   user_id: string;
   display_name: string | null;
   avatar_url: string | null;
+  ui_language: string | null;
+  content_language: string | null;
   created_at: string;
   updated_at: string;
 }
 
 export interface Settings {
   id: string;
+  user_id: string;
   key: string;
   value: any;
   description: string | null;
   updated_at: string;
+}
+
+export interface NewsItem {
+  id: string;
+  user_id: string;
+  title: string;
+  summary: string | null;
+  full_content: string | null;
+  source_url: string | null;
+  official_url: string | null;
+  source_name: string | null;
+  tool_name: string | null;
+  published_date: string | null;
+  discovered_at: string | null;
+  status: string | null;
+  tags: string[] | null;
+  raw_perplexity_response: any;
+  raw_firecrawl_response: any;
+  created_at: string;
 }

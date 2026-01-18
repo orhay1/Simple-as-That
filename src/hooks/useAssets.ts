@@ -2,9 +2,11 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Asset } from '@/types/database';
+import { useAuth } from '@/contexts/AuthContext';
 
 export function useAssets() {
   const queryClient = useQueryClient();
+  const { user } = useAuth();
 
   const { data: assets, isLoading, error } = useQuery({
     queryKey: ['assets'],
@@ -16,6 +18,28 @@ export function useAssets() {
 
       if (error) throw error;
       return data as Asset[];
+    },
+  });
+
+  const createAsset = useMutation({
+    mutationFn: async (asset: { file_url: string; prompt?: string; is_ai_generated?: boolean; metadata?: Record<string, any> }) => {
+      if (!user) throw new Error('User not authenticated');
+      
+      const { data, error } = await supabase
+        .from('assets')
+        .insert([{ ...asset, user_id: user.id }])
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['assets'] });
+      toast.success('Asset created');
+    },
+    onError: (error: Error) => {
+      toast.error('Failed to create asset: ' + error.message);
     },
   });
 
@@ -71,6 +95,7 @@ export function useAssets() {
     assets,
     isLoading,
     error,
+    createAsset,
     deleteAsset,
     attachAssetToDraft,
   };

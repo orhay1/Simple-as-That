@@ -31,6 +31,7 @@ export type Database = {
           tags: string[] | null
           title: string
           tool_name: string | null
+          user_id: string
         }
         Insert: {
           created_at?: string | null
@@ -48,6 +49,7 @@ export type Database = {
           tags?: string[] | null
           title: string
           tool_name?: string | null
+          user_id: string
         }
         Update: {
           created_at?: string | null
@@ -65,6 +67,7 @@ export type Database = {
           tags?: string[] | null
           title?: string
           tool_name?: string | null
+          user_id?: string
         }
         Relationships: []
       }
@@ -121,6 +124,7 @@ export type Database = {
           is_ai_generated: boolean | null
           metadata: Json | null
           prompt: string | null
+          user_id: string
         }
         Insert: {
           created_at?: string
@@ -129,6 +133,7 @@ export type Database = {
           is_ai_generated?: boolean | null
           metadata?: Json | null
           prompt?: string | null
+          user_id: string
         }
         Update: {
           created_at?: string
@@ -137,6 +142,7 @@ export type Database = {
           is_ai_generated?: boolean | null
           metadata?: Json | null
           prompt?: string | null
+          user_id?: string
         }
         Relationships: []
       }
@@ -152,6 +158,7 @@ export type Database = {
           no_clickbait: boolean | null
           required_disclaimers: string[] | null
           updated_at: string
+          user_id: string
         }
         Insert: {
           allow_links?: boolean | null
@@ -164,6 +171,7 @@ export type Database = {
           no_clickbait?: boolean | null
           required_disclaimers?: string[] | null
           updated_at?: string
+          user_id: string
         }
         Update: {
           allow_links?: boolean | null
@@ -176,6 +184,7 @@ export type Database = {
           no_clickbait?: boolean | null
           required_disclaimers?: string[] | null
           updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }
@@ -246,6 +255,7 @@ export type Database = {
           title: string
           topic_id: string | null
           updated_at: string
+          user_id: string
           versions: Json | null
         }
         Insert: {
@@ -266,6 +276,7 @@ export type Database = {
           title: string
           topic_id?: string | null
           updated_at?: string
+          user_id: string
           versions?: Json | null
         }
         Update: {
@@ -286,6 +297,7 @@ export type Database = {
           title?: string
           topic_id?: string | null
           updated_at?: string
+          user_id?: string
           versions?: Json | null
         }
         Relationships: [
@@ -320,6 +332,7 @@ export type Database = {
           is_active: boolean | null
           name: string
           skeleton: string
+          user_id: string
         }
         Insert: {
           created_at?: string
@@ -328,6 +341,7 @@ export type Database = {
           is_active?: boolean | null
           name: string
           skeleton: string
+          user_id: string
         }
         Update: {
           created_at?: string
@@ -336,6 +350,7 @@ export type Database = {
           is_active?: boolean | null
           name?: string
           skeleton?: string
+          user_id?: string
         }
         Relationships: []
       }
@@ -386,6 +401,7 @@ export type Database = {
           published_at: string | null
           published_url: string | null
           updated_at: string
+          user_id: string
         }
         Insert: {
           comments?: number | null
@@ -400,6 +416,7 @@ export type Database = {
           published_at?: string | null
           published_url?: string | null
           updated_at?: string
+          user_id: string
         }
         Update: {
           comments?: number | null
@@ -414,6 +431,7 @@ export type Database = {
           published_at?: string | null
           published_url?: string | null
           updated_at?: string
+          user_id?: string
         }
         Relationships: [
           {
@@ -431,6 +449,7 @@ export type Database = {
           id: string
           key: string
           updated_at: string
+          user_id: string
           value: Json
         }
         Insert: {
@@ -438,6 +457,7 @@ export type Database = {
           id?: string
           key: string
           updated_at?: string
+          user_id: string
           value: Json
         }
         Update: {
@@ -445,6 +465,7 @@ export type Database = {
           id?: string
           key?: string
           updated_at?: string
+          user_id?: string
           value?: Json
         }
         Relationships: []
@@ -461,6 +482,7 @@ export type Database = {
           tags: string[] | null
           title: string
           updated_at: string
+          user_id: string
         }
         Insert: {
           created_at?: string
@@ -473,6 +495,7 @@ export type Database = {
           tags?: string[] | null
           title: string
           updated_at?: string
+          user_id: string
         }
         Update: {
           created_at?: string
@@ -485,6 +508,7 @@ export type Database = {
           tags?: string[] | null
           title?: string
           updated_at?: string
+          user_id?: string
         }
         Relationships: [
           {
@@ -536,6 +560,7 @@ export type Database = {
           name: string
           tone_rules: string | null
           updated_at: string
+          user_id: string
         }
         Insert: {
           banned_phrases?: string[] | null
@@ -548,6 +573,7 @@ export type Database = {
           name: string
           tone_rules?: string | null
           updated_at?: string
+          user_id: string
         }
         Update: {
           banned_phrases?: string[] | null
@@ -560,6 +586,7 @@ export type Database = {
           name?: string
           tone_rules?: string | null
           updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }
