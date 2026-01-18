@@ -284,7 +284,7 @@ serve(async (req) => {
     // Update draft status and create publication record if draftId provided
     const validatedDraftId = draftIdValidation.sanitized;
     if (validatedDraftId) {
-      // Update draft status to published
+      // Update draft status to published (only if user owns the draft)
       await supabase
         .from('post_drafts')
         .update({
@@ -292,13 +292,15 @@ serve(async (req) => {
           published_url: postUrl,
           updated_at: new Date().toISOString(),
         })
-        .eq('id', validatedDraftId);
+        .eq('id', validatedDraftId)
+        .eq('user_id', user.id);
 
-      // Get the draft for publication record
+      // Get the draft for publication record (only if user owns the draft)
       const { data: draft } = await supabase
         .from('post_drafts')
         .select('*')
         .eq('id', validatedDraftId)
+        .eq('user_id', user.id)
         .single();
 
       if (draft) {
@@ -309,6 +311,7 @@ serve(async (req) => {
             .from('assets')
             .select('file_url')
             .eq('id', draft.image_asset_id)
+            .eq('user_id', user.id)
             .single();
           imageUrl = asset?.file_url || null;
         }
