@@ -3,7 +3,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useSettings } from '@/hooks/useSettings';
-import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 
 const IMAGE_MODELS = [
@@ -29,7 +28,6 @@ const IMAGE_MODELS = [
 
 export function ImageSettingsTab() {
   const { getSetting, upsertSetting } = useSettings();
-  const { isAdmin } = useAuth();
   const { t } = useLanguage();
   const [localModel, setLocalModel] = useState<string | null>(null);
 
@@ -51,7 +49,6 @@ export function ImageSettingsTab() {
           <CardTitle>{t.settingsImages.title}</CardTitle>
           <CardDescription>
             {t.settingsImages.description}
-            {!isAdmin && <span className="ml-1 text-amber-500">{t.common.adminOnly}</span>}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -62,7 +59,6 @@ export function ImageSettingsTab() {
                 <Select
                   value={getImageModel()}
                   onValueChange={handleModelChange}
-                  disabled={!isAdmin}
                 >
                   <SelectTrigger id="image_generation_model">
                     <SelectValue placeholder="Select image model" />

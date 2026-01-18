@@ -182,21 +182,7 @@ serve(async (req) => {
       });
     }
 
-    // Verify user has editor or manager role
-    const { data: roleData } = await supabase
-      .from('user_roles')
-      .select('role')
-      .eq('user_id', user.id)
-      .single();
-
-    if (!roleData || !['editor', 'manager'].includes(roleData.role)) {
-      console.error('Insufficient permissions for user:', user.id);
-      return new Response(JSON.stringify({ error: 'Insufficient permissions' }), {
-        status: 403,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
+    // User is authenticated, proceed with request
     const requestBody: GenerateImageRequest = await req.json();
     
     // Validate prompt

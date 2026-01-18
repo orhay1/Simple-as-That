@@ -50,7 +50,7 @@ export const AppSidebar = React.forwardRef<
   const { state } = useSidebar();
   const collapsed = state === 'collapsed';
   const location = useLocation();
-  const { signOut, userRole } = useAuth();
+  const { signOut } = useAuth();
   const { t } = useTranslation();
   const { isRTL } = useLanguage();
 
@@ -123,12 +123,6 @@ export const AppSidebar = React.forwardRef<
       </SidebarContent>
 
       <SidebarFooter className="border-t border-sidebar-border p-4">
-        {!collapsed && userRole && (
-          <div className="mb-3 rounded-lg bg-sidebar-accent/50 px-3 py-2">
-            <span className="text-xs text-sidebar-foreground/60">{t.common.role}:</span>
-            <span className="ms-1 text-xs font-medium capitalize text-sidebar-foreground">{userRole}</span>
-          </div>
-        )}
         <Button
           variant="ghost"
           size="sm"

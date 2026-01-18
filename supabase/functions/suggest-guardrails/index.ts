@@ -64,21 +64,7 @@ serve(async (req) => {
       });
     }
 
-    // Verify user has manager role (guardrails are manager-only)
-    const { data: roleData } = await supabase
-      .from('user_roles')
-      .select('role')
-      .eq('user_id', user.id)
-      .single();
-
-    if (!roleData || roleData.role !== 'manager') {
-      console.error('Insufficient permissions for user:', user.id);
-      return new Response(JSON.stringify({ error: 'Insufficient permissions' }), {
-        status: 403,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
+    // User is authenticated, proceed with request
     const requestBody = await req.json();
     
     // Validate context input
