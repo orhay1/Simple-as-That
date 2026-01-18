@@ -60,8 +60,8 @@ export const AppSidebar = React.forwardRef<
     <Sidebar ref={ref} side={isRTL ? 'right' : 'left'} className={cn(collapsed ? 'w-16' : 'w-64', 'transition-all duration-200')} {...props}>
       <SidebarHeader className="border-b border-sidebar-border p-4">
         <div className="flex items-center gap-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-full overflow-hidden">
-            <img src={logoImage} alt="Simple as That" className="h-12 w-12 object-cover object-center" />
+          <div className="flex h-9 w-9 items-center justify-center overflow-hidden">
+            <img src={logoImage} alt="Simple as That" className="h-9 w-9 object-contain" />
           </div>
           {!collapsed && (
             <div className="flex flex-col">
