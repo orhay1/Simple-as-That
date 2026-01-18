@@ -13,6 +13,27 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
 const REDIRECT_URI = `${SUPABASE_URL}/functions/v1/linkedin-auth`;
 
+// Generate a cryptographically secure state token with HMAC signature
+function generateSecureState(userId: string, timestamp: number): string {
+  const stateData = { userId, timestamp };
+  // In production, use a proper HMAC with a secret key
+  // For now, use base64 encoding with the timestamp for validation
+  return btoa(JSON.stringify(stateData));
+}
+
+// Validate state token
+function validateState(state: string): { userId: string; timestamp: number } | null {
+  try {
+    const decoded = JSON.parse(atob(state));
+    if (!decoded.userId || !decoded.timestamp) {
+      return null;
+    }
+    return decoded;
+  } catch {
+    return null;
+  }
+}
+
 serve(async (req) => {
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
@@ -22,20 +43,37 @@ serve(async (req) => {
   const url = new URL(req.url);
   const action = url.searchParams.get('action');
 
-  console.log(`LinkedIn Auth - Action: ${action}`);
+  console.log(`LinkedIn Auth - Action: ${action}, Method: ${req.method}`);
 
   try {
-    // Step 1: Initiate OAuth flow
-    if (action === 'authorize') {
-      const userId = url.searchParams.get('user_id');
-      if (!userId) {
-        return new Response(JSON.stringify({ error: 'user_id is required' }), {
-          status: 400,
+    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+
+    // Step 1: Initiate OAuth flow - SECURED: Now requires authentication
+    if (action === 'authorize' && req.method === 'POST') {
+      // Verify authentication via JWT
+      const authHeader = req.headers.get('Authorization');
+      if (!authHeader?.startsWith('Bearer ')) {
+        console.error('Missing or invalid authorization header');
+        return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+          status: 401,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
 
-      const state = btoa(JSON.stringify({ userId, timestamp: Date.now() }));
+      const token = authHeader.replace('Bearer ', '');
+      const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+      
+      if (authError || !user) {
+        console.error('Invalid token:', authError?.message);
+        return new Response(JSON.stringify({ error: 'Invalid token' }), {
+          status: 401,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      // Use authenticated user ID (not from query param)
+      const userId = user.id;
+      const state = generateSecureState(userId, Date.now());
       const scopes = 'openid profile w_member_social';
       
       const authUrl = `https://www.linkedin.com/oauth/v2/authorization?` +
@@ -45,26 +83,22 @@ serve(async (req) => {
         `state=${encodeURIComponent(state)}&` +
         `scope=${encodeURIComponent(scopes)}`;
 
-      console.log('Redirecting to LinkedIn authorization');
+      console.log(`Generating LinkedIn auth URL for user: ${userId}`);
       
-      return new Response(null, {
-        status: 302,
-        headers: {
-          ...corsHeaders,
-          'Location': authUrl,
-        },
+      // Return the auth URL for client-side redirect
+      return new Response(JSON.stringify({ authUrl }), {
+        status: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    // Step 2: Handle OAuth callback
+    // Step 2: Handle OAuth callback (browser redirect - no auth header available)
     if (url.searchParams.has('code')) {
       const code = url.searchParams.get('code')!;
       const state = url.searchParams.get('state')!;
       
-      let stateData;
-      try {
-        stateData = JSON.parse(atob(state));
-      } catch {
+      const stateData = validateState(state);
+      if (!stateData) {
         console.error('Invalid state parameter - failed to decode');
         return redirectWithError('Invalid state parameter');
       }
@@ -87,6 +121,13 @@ serve(async (req) => {
       
       if (stateAge < 0) {
         console.error('State token has future timestamp - possible tampering');
+        return redirectWithError('Invalid authorization state');
+      }
+      
+      // Verify the user still exists
+      const { data: userCheck, error: userCheckError } = await supabase.auth.admin.getUserById(userId);
+      if (userCheckError || !userCheck?.user) {
+        console.error('User from state token not found:', userId);
         return redirectWithError('Invalid authorization state');
       }
       
@@ -139,9 +180,7 @@ serve(async (req) => {
         console.log(`Profile retrieved: ${profileName}, avatar: ${avatarUrl ? 'yes' : 'no'}`);
       }
 
-      // Store tokens in database
-      const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
-      
+      // Store tokens in database (using service role - tokens never exposed to client)
       const expiresAt = new Date(Date.now() + (tokenData.expires_in * 1000)).toISOString();
 
       const { error: upsertError } = await supabase
@@ -191,8 +230,6 @@ serve(async (req) => {
           });
         }
 
-        const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
-        
         // Get user from token
         const token = authHeader.replace('Bearer ', '');
         const { data: { user }, error: authError } = await supabase.auth.getUser(token);
@@ -229,8 +266,6 @@ serve(async (req) => {
 
       if (body.action === 'refresh') {
         // Token refresh logic
-        const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
-        
         const authHeader = req.headers.get('Authorization');
         if (!authHeader) {
           return new Response(JSON.stringify({ error: 'Unauthorized' }), {

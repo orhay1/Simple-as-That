@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 
+// Client-safe interface - excludes sensitive token fields
 interface LinkedInConnection {
   id: string;
   user_id: string;
@@ -24,6 +25,7 @@ export function useLinkedIn() {
     queryFn: async () => {
       if (!user?.id) return null;
       
+      // Only fetch non-sensitive fields - tokens are never exposed to client
       const { data, error } = await supabase
         .from('linkedin_connections')
         .select('id, user_id, is_connected, profile_name, profile_id, avatar_url, headline, connected_at, expires_at')
@@ -36,14 +38,44 @@ export function useLinkedIn() {
     enabled: !!user?.id,
   });
 
-  const connectLinkedIn = () => {
+  // SECURED: Use authenticated POST request instead of URL redirect with user_id
+  const connectLinkedIn = async () => {
     if (!user?.id) {
       toast.error('You must be logged in to connect LinkedIn');
       return;
     }
 
-    const authUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/linkedin-auth?action=authorize&user_id=${user.id}`;
-    window.location.href = authUrl;
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        toast.error('Authentication required');
+        return;
+      }
+
+      // Make authenticated request to get the OAuth URL
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/linkedin-auth?action=authorize`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to initiate LinkedIn connection');
+      }
+
+      const data = await response.json();
+      if (data.authUrl) {
+        window.location.href = data.authUrl;
+      } else {
+        throw new Error('No auth URL received');
+      }
+    } catch (error) {
+      console.error('LinkedIn connect error:', error);
+      toast.error('Failed to connect to LinkedIn: ' + (error instanceof Error ? error.message : 'Unknown error'));
+    }
   };
 
   const disconnectLinkedIn = useMutation({
