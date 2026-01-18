@@ -8,7 +8,6 @@ import { Switch } from '@/components/ui/switch';
 import { Slider } from '@/components/ui/slider';
 import { Badge } from '@/components/ui/badge';
 import { useGuardrails } from '@/hooks/useGuardrails';
-import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { X, Plus, Sparkles, Loader2, Save, Check } from 'lucide-react';
 
@@ -66,7 +65,6 @@ function TagInput({ tags, onTagsChange, placeholder, disabled }: TagInputProps) 
 
 export function GuardrailsTab() {
   const { guardrails, isLoading, updateGuardrails, suggestGuardrails } = useGuardrails();
-  const { isAdmin } = useAuth();
   const { t } = useLanguage();
   
   const [bannedPhrases, setBannedPhrases] = useState<string[]>([]);
@@ -127,7 +125,7 @@ export function GuardrailsTab() {
     );
   }
 
-  const disabled = !isAdmin;
+  const disabled = false;
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -137,7 +135,6 @@ export function GuardrailsTab() {
           <CardTitle>{t.settingsGuardrails.title}</CardTitle>
           <CardDescription>
             {t.settingsGuardrails.description}
-            {!isAdmin && <span className="ml-1 text-amber-500">{t.common.adminOnly}</span>}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -215,8 +212,7 @@ export function GuardrailsTab() {
       </Card>
 
       {/* AI Suggestions */}
-      {isAdmin && (
-        <Card>
+      <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Sparkles className="h-5 w-5 text-primary" />
@@ -292,7 +288,6 @@ export function GuardrailsTab() {
             </div>
           </CardContent>
         </Card>
-      )}
     </div>
   );
 }

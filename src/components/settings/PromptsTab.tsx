@@ -4,7 +4,6 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { useSettings } from '@/hooks/useSettings';
-import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { ChevronDown, Save, Loader2, RotateCcw } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -125,7 +124,6 @@ Return ONLY the summary text. No headers, no formatting, no quotes.`;
 
 export function PromptsTab() {
   const { getSetting, upsertSetting } = useSettings();
-  const { isAdmin } = useAuth();
   const { t } = useLanguage();
   const [prompts, setPrompts] = useState<Record<string, string>>({});
   const [savingKey, setSavingKey] = useState<string | null>(null);
@@ -257,7 +255,6 @@ Return ONLY a 1-2 sentence image description (max 40 words) specific to this too
           <CardTitle>{t.settingsPrompts.title}</CardTitle>
           <CardDescription>
             {t.settingsPrompts.description}
-            {!isAdmin && <span className="ml-1 text-amber-500">{t.common.adminOnly}</span>}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
@@ -272,7 +269,7 @@ Return ONLY a 1-2 sentence image description (max 40 words) specific to this too
               onSave={() => handleSavePrompt(config.key, config.defaultValue)}
               onReset={() => handleReset(config.key, config.defaultValue)}
               isSaving={savingKey === config.key}
-              disabled={!isAdmin}
+              disabled={false}
               t={{
                 reset: t.common.reset,
                 save: t.common.save,

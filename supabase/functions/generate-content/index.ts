@@ -711,22 +711,7 @@ serve(async (req) => {
       });
     }
 
-    // Verify user has appropriate role (user or admin)
-    const { data: roleData } = await supabase
-      .from('user_roles')
-      .select('role')
-      .eq('user_id', user.id)
-      .single();
-
-    // Allow all authenticated users with a role (backward compat with old roles)
-    if (!roleData || !['user', 'admin', 'editor', 'manager'].includes(roleData.role)) {
-      console.error('Insufficient permissions for user:', user.id);
-      return new Response(JSON.stringify({ error: 'Insufficient permissions' }), {
-        status: 403,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
+    // User is authenticated, proceed with request
     const { type, inputs = {}, language }: GenerateRequest = await req.json();
     console.log(`Processing ${type} generation request for user ${user.id}`, inputs);
 

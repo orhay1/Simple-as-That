@@ -212,22 +212,7 @@ serve(async (req) => {
       );
     }
 
-    // Check user role - allow both 'manager' (old) and 'admin' (new) roles
-    const { data: roleData } = await supabase
-      .from('user_roles')
-      .select('role')
-      .eq('user_id', user.id)
-      .single();
-
-    const userRole = roleData?.role;
-    if (!userRole || (userRole !== 'manager' && userRole !== 'admin')) {
-      console.error('Insufficient permissions for user:', user.id);
-      return new Response(
-        JSON.stringify({ success: false, error: 'Admin role required for research' }),
-        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
+    // User is authenticated, proceed with request
     const requestBody = await req.json();
     
     // Validate inputs

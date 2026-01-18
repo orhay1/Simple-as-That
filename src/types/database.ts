@@ -8,7 +8,6 @@ export interface DraftVersion {
   created_at: string;
 }
 
-export type AppRole = 'user' | 'admin';
 export type TopicStatus = 'new' | 'shortlisted' | 'archived';
 export type PostStatus = 'draft' | 'approved' | 'scheduled' | 'published';
 export type ToneStyle = 'founder' | 'educational' | 'contrarian' | 'story';
@@ -139,12 +138,6 @@ export interface PostTemplate {
   created_at: string;
 }
 
-export interface UserRole {
-  id: string;
-  user_id: string;
-  role: AppRole;
-  created_at: string;
-}
 
 export interface Profile {
   id: string;
