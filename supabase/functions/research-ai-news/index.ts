@@ -257,11 +257,12 @@ serve(async (req) => {
 
     console.log(`Research initiated by user ${user.id}, count: ${count}, language: ${language}`);
 
-    // Fetch custom prompts from settings
-    console.log('Fetching custom prompts from settings...');
+    // Fetch custom prompts from user's settings
+    console.log('Fetching custom prompts from settings for user:', user.id);
     const { data: settings } = await supabase
       .from('settings')
       .select('key, value')
+      .eq('user_id', user.id)
       .in('key', ['perplexity_system_prompt', 'perplexity_user_prompt', 'research_polish_prompt']);
 
     const settingsMap: Record<string, string> = {};

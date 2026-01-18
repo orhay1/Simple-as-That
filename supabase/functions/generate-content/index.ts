@@ -21,15 +21,21 @@ interface GenerateRequest {
   language?: string;
 }
 
-async function getPromptFromSettings(key: string): Promise<string | null> {
-  const { data, error } = await supabase
+async function getPromptFromSettings(key: string, userId?: string): Promise<string | null> {
+  let query = supabase
     .from('settings')
     .select('value')
-    .eq('key', key)
-    .maybeSingle();
+    .eq('key', key);
+  
+  // Filter by user_id if provided (required for multi-user isolation)
+  if (userId) {
+    query = query.eq('user_id', userId);
+  }
+  
+  const { data, error } = await query.maybeSingle();
   
   if (error || !data) {
-    console.log(`No prompt found for key: ${key}`);
+    console.log(`No prompt found for key: ${key}${userId ? ` for user: ${userId}` : ''}`);
     return null;
   }
   
@@ -96,9 +102,9 @@ async function callOpenAI(
   };
 }
 
-async function generateTopics(inputs: Record<string, any>) {
+async function generateTopics(inputs: Record<string, any>, userId: string) {
   // Use 'perplexity_system_prompt' to match Settings UI key
-  const customPrompt = await getPromptFromSettings('perplexity_system_prompt');
+  const customPrompt = await getPromptFromSettings('perplexity_system_prompt', userId);
   
   const defaultPrompt = `You are a LinkedIn content strategist and thought leader. Your task is to generate compelling topic ideas that drive engagement and establish authority.
 
@@ -183,11 +189,11 @@ Return ONLY the JSON array, no additional text or explanation.`;
   return { topics: insertedTopics, usage };
 }
 
-async function generateDraft(inputs: Record<string, any>, language: string = 'en') {
+async function generateDraft(inputs: Record<string, any>, language: string = 'en', userId?: string) {
   const { title, summary, full_content, source_url } = inputs;
   
   // Use custom GPT instructions from settings or fall back to default
-  const customGptInstructions = await getPromptFromSettings('gpt_master_instructions');
+  const customGptInstructions = await getPromptFromSettings('gpt_master_instructions', userId);
   
   const languageNames: Record<string, string> = {
     'en': 'English',
@@ -295,11 +301,11 @@ Return ONLY the JSON object, no additional text or explanation.`;
   return { draft: parsed, usage };
 }
 
-async function generateHashtags(inputs: Record<string, any>) {
+async function generateHashtags(inputs: Record<string, any>, userId?: string) {
   const { body, title } = inputs;
   
   // Use 'hashtag_generator_prompt' to match Settings UI key
-  const customPrompt = await getPromptFromSettings('hashtag_generator_prompt');
+  const customPrompt = await getPromptFromSettings('hashtag_generator_prompt', userId);
   
   const defaultPrompt = `You are a LinkedIn hashtag expert. Generate PRECISE, TOOL-SPECIFIC hashtags.
 
@@ -620,10 +626,10 @@ async function rewriteContent(inputs: Record<string, any>) {
   return { rewritten: content, usage };
 }
 
-async function generateImageDescription(inputs: Record<string, any>) {
+async function generateImageDescription(inputs: Record<string, any>, userId?: string) {
   const { title, body } = inputs;
   
-  const customPrompt = await getPromptFromSettings('image_generator_prompt');
+  const customPrompt = await getPromptFromSettings('image_generator_prompt', userId);
   
   const systemPrompt = `You are a visual concept designer for AI tools and technology. Create image descriptions that visually represent the SPECIFIC tool or concept discussed, NOT generic office/workplace scenes.`;
 
@@ -718,10 +724,10 @@ serve(async (req) => {
     let result;
     switch (type) {
       case 'draft':
-        result = await generateDraft(inputs, language || inputs.language || 'en');
+        result = await generateDraft(inputs, language || inputs.language || 'en', user.id);
         break;
       case 'hashtags':
-        result = await generateHashtags(inputs);
+        result = await generateHashtags(inputs, user.id);
         break;
       case 'hashtags_free':
         result = await generateHashtagsFree(inputs);
@@ -730,7 +736,7 @@ serve(async (req) => {
         result = await rewriteContent(inputs);
         break;
       case 'image_description':
-        result = await generateImageDescription(inputs);
+        result = await generateImageDescription(inputs, user.id);
         break;
       default:
         throw new Error(`Unknown generation type: ${type}`);
