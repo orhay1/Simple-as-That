@@ -572,6 +572,26 @@ async function rewriteContent(inputs: Record<string, any>) {
 - Include dialogue or internal thoughts if appropriate
 - End with the lesson or takeaway
 - Make it relatable and human${languageInstruction}`,
+
+    translate_he: `Rewrite this content entirely in Hebrew (עברית) for an Israeli LinkedIn audience.
+
+## Instructions
+- Maintain the core message, hook, and structure
+- Adapt cultural references and tone for Israeli professionals
+- Use natural Hebrew phrasing, not direct translation
+- Keep hashtags in English
+- The result should feel like it was written by a native Hebrew speaker
+- Match Israeli professional culture: direct, informal-yet-intelligent, optimistic`,
+
+    translate_en: `Rewrite this content entirely in English for a global LinkedIn audience.
+
+## Instructions
+- Maintain the core message, hook, and structure
+- Adapt tone for global professional readers
+- Use natural English phrasing, not direct translation
+- Keep hashtags in English
+- The result should feel like it was written by a native English speaker
+- Follow global LinkedIn conventions: warm, articulate, and slightly polished`,
   };
 
   const systemPrompt = `You are a LinkedIn content editor and writing coach. Your task is to rewrite content according to specific instructions while maintaining the core message.
