@@ -565,7 +565,48 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      linkedin_connections_public: {
+        Row: {
+          avatar_url: string | null
+          connected_at: string | null
+          created_at: string | null
+          expires_at: string | null
+          headline: string | null
+          id: string | null
+          is_connected: boolean | null
+          profile_id: string | null
+          profile_name: string | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          avatar_url?: string | null
+          connected_at?: string | null
+          created_at?: string | null
+          expires_at?: string | null
+          headline?: string | null
+          id?: string | null
+          is_connected?: boolean | null
+          profile_id?: string | null
+          profile_name?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          avatar_url?: string | null
+          connected_at?: string | null
+          created_at?: string | null
+          expires_at?: string | null
+          headline?: string | null
+          id?: string | null
+          is_connected?: boolean | null
+          profile_id?: string | null
+          profile_name?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       has_any_role: { Args: { _user_id: string }; Returns: boolean }

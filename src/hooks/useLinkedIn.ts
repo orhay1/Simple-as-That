@@ -25,9 +25,11 @@ export function useLinkedIn() {
     queryFn: async () => {
       if (!user?.id) return null;
       
-      // Only fetch non-sensitive fields - tokens are never exposed to client
-      const { data, error } = await supabase
-        .from('linkedin_connections')
+      // Query the public view which excludes sensitive token fields
+      // The base table denies SELECT access to prevent token exposure
+      // Cast to 'any' since the view isn't in auto-generated types
+      const { data, error } = await (supabase
+        .from('linkedin_connections_public') as any)
         .select('id, user_id, is_connected, profile_name, profile_id, avatar_url, headline, connected_at, expires_at')
         .eq('user_id', user.id)
         .maybeSingle();
