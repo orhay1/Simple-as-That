@@ -52,11 +52,16 @@ export function useAssets() {
         .eq('id', id)
         .single();
 
-      // If it's a storage URL, delete from storage too
+      // Delete from appropriate storage bucket
       if (asset?.file_url?.includes('/ai-images/')) {
         const fileName = asset.file_url.split('/ai-images/').pop();
         if (fileName) {
           await supabase.storage.from('ai-images').remove([fileName]);
+        }
+      } else if (asset?.file_url?.includes('/user-uploads/')) {
+        const fileName = asset.file_url.split('/user-uploads/').pop();
+        if (fileName) {
+          await supabase.storage.from('user-uploads').remove([fileName]);
         }
       }
 
