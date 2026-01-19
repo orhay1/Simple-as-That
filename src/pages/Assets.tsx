@@ -4,6 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { AssetCard } from '@/components/assets/AssetCard';
 import { AssetDetailDialog } from '@/components/assets/AssetDetailDialog';
+import { FileUploadButton } from '@/components/assets/FileUploadButton';
 import { useAssets } from '@/hooks/useAssets';
 import { useTranslation } from '@/hooks/useTranslation';
 import { Asset } from '@/types/database';
@@ -49,6 +50,7 @@ export default function Assets() {
             <h1 className="text-3xl font-bold text-foreground">{t.assets.title}</h1>
             <p className="text-muted-foreground">{t.assets.subtitle}</p>
           </div>
+          <FileUploadButton />
         </div>
 
         {/* Filters */}
