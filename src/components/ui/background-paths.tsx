@@ -12,12 +12,17 @@ function FloatingPaths({ position }: { position: number }) {
     } ${343 - i * 6}C${616 - i * 5 * position} ${470 - i * 6} ${
       684 - i * 5 * position
     } ${875 - i * 6} ${684 - i * 5 * position} ${875 - i * 6}`,
+    color: `rgba(15,23,42,${0.1 + i * 0.03})`,
     width: 0.5 + i * 0.03,
   }));
 
   return (
     <div className="absolute inset-0 pointer-events-none">
-      <svg className="h-full w-full text-slate-950 dark:text-white" viewBox="0 0 696 316" fill="none">
+      <svg
+        className="w-full h-full text-foreground/10 dark:text-foreground/5"
+        viewBox="0 0 696 316"
+        fill="none"
+      >
         <title>Background Paths</title>
         {paths.map((path) => (
           <motion.path
@@ -25,7 +30,7 @@ function FloatingPaths({ position }: { position: number }) {
             d={path.d}
             stroke="currentColor"
             strokeWidth={path.width}
-            strokeOpacity={0.1 + path.id * 0.03}
+            strokeOpacity={0.1 + path.id * 0.02}
             initial={{ pathLength: 0.3, opacity: 0.6 }}
             animate={{
               pathLength: 1,
@@ -46,7 +51,7 @@ function FloatingPaths({ position }: { position: number }) {
 
 export function BackgroundPaths() {
   return (
-    <div className="fixed inset-0 z-0 overflow-hidden bg-white dark:bg-neutral-950 pointer-events-none">
+    <div className="fixed inset-0 -z-10 overflow-hidden bg-background">
       <div className="absolute inset-0">
         <FloatingPaths position={1} />
         <FloatingPaths position={-1} />

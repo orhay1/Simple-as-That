@@ -4,6 +4,7 @@ import { AppSidebar } from './AppSidebar';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { cn } from '@/lib/utils';
+import { BackgroundPaths } from '@/components/ui/background-paths';
 
 interface AppLayoutProps {
   children: ReactNode;
@@ -14,6 +15,7 @@ export function AppLayout({ children }: AppLayoutProps) {
 
   return (
     <SidebarProvider>
+      <BackgroundPaths />
       <div className="flex min-h-screen w-full">
         <AppSidebar />
         <main className="flex-1 overflow-auto">
