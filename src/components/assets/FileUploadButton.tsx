@@ -1,7 +1,4 @@
-"use client"
-
-import React, { useState } from "react"
-import { FileTrigger } from "react-aria-components"
+import React, { useRef, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Upload, Loader2 } from "lucide-react"
 import { supabase } from "@/integrations/supabase/client"
@@ -14,11 +11,17 @@ export function FileUploadButton() {
   const [filename, setFilename] = useState<string>()
   const { createAsset } = useAssets()
   const { user } = useAuth()
+  const inputRef = useRef<HTMLInputElement>(null)
 
-  const handleSelect = async (e: FileList | null) => {
-    if (!e || !user) return
+  const handleClick = () => {
+    inputRef.current?.click()
+  }
 
-    const file = e[0]
+  const handleChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files
+    if (!files || !user) return
+
+    const file = files[0]
     if (!file) return
 
     // Validate file type
@@ -60,19 +63,26 @@ export function FileUploadButton() {
       })
 
       setFilename(undefined)
+      toast.success('File uploaded successfully')
     } catch (error: any) {
       toast.error('Upload failed: ' + error.message)
     } finally {
       setUploading(false)
+      // Reset input so same file can be selected again
+      if (inputRef.current) inputRef.current.value = ''
     }
   }
 
   return (
-    <FileTrigger
-      onSelect={handleSelect}
-      acceptedFileTypes={['image/*', 'video/*']}
-    >
-      <Button disabled={uploading}>
+    <>
+      <input
+        ref={inputRef}
+        type="file"
+        accept="image/*,video/*"
+        onChange={handleChange}
+        className="hidden"
+      />
+      <Button onClick={handleClick} disabled={uploading}>
         {uploading ? (
           <>
             <Loader2 className="h-4 w-4 animate-spin" />
@@ -85,6 +95,6 @@ export function FileUploadButton() {
           </>
         )}
       </Button>
-    </FileTrigger>
+    </>
   )
 }
