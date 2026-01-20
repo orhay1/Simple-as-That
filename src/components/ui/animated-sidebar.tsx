@@ -16,6 +16,7 @@ interface SidebarContextProps {
   open: boolean;
   setOpen: React.Dispatch<React.SetStateAction<boolean>>;
   animate: boolean;
+  pinned: boolean;
 }
 
 const SidebarContext = createContext<SidebarContextProps | undefined>(
@@ -35,11 +36,13 @@ export const SidebarProvider = ({
   open: openProp,
   setOpen: setOpenProp,
   animate = true,
+  pinned = false,
 }: {
   children: React.ReactNode;
   open?: boolean;
   setOpen?: React.Dispatch<React.SetStateAction<boolean>>;
   animate?: boolean;
+  pinned?: boolean;
 }) => {
   const [openState, setOpenState] = useState(false);
 
@@ -47,7 +50,7 @@ export const SidebarProvider = ({
   const setOpen = setOpenProp !== undefined ? setOpenProp : setOpenState;
 
   return (
-    <SidebarContext.Provider value={{ open, setOpen, animate }}>
+    <SidebarContext.Provider value={{ open, setOpen, animate, pinned }}>
       {children}
     </SidebarContext.Provider>
   );
@@ -58,14 +61,16 @@ export const Sidebar = ({
   open,
   setOpen,
   animate,
+  pinned,
 }: {
   children: React.ReactNode;
   open?: boolean;
   setOpen?: React.Dispatch<React.SetStateAction<boolean>>;
   animate?: boolean;
+  pinned?: boolean;
 }) => {
   return (
-    <SidebarProvider open={open} setOpen={setOpen} animate={animate}>
+    <SidebarProvider open={open} setOpen={setOpen} animate={animate} pinned={pinned}>
       {children}
     </SidebarProvider>
   );
@@ -91,18 +96,43 @@ export const DesktopSidebar = ({
   children,
   ...props
 }: React.ComponentProps<typeof motion.div>) => {
-  const { open, setOpen, animate } = useSidebar();
+  const { open, setOpen, animate, pinned } = useSidebar();
+  const sidebarRef = React.useRef<HTMLDivElement>(null);
+  const hoverBuffer = 12;
   return (
     <motion.div
       className={cn(
-        "h-full px-4 py-4 hidden md:flex md:flex-col bg-sidebar border-r border-sidebar-border w-[300px] shrink-0",
+        "relative h-full min-h-screen px-4 py-4 hidden md:flex md:flex-col bg-sidebar border-r border-sidebar-border w-[300px] shrink-0",
         className
       )}
+      ref={sidebarRef}
       animate={{
         width: animate ? (open ? "300px" : "84px") : "300px",
       }}
-      onMouseEnter={() => setOpen(true)}
-      onMouseLeave={() => setOpen(false)}
+      onMouseEnter={() => {
+        if (!pinned) {
+          setOpen(true);
+        }
+      }}
+      onMouseLeave={(event) => {
+        if (pinned) {
+          return;
+        }
+
+        if (sidebarRef.current) {
+          const rect = sidebarRef.current.getBoundingClientRect();
+          const inBuffer =
+            event.clientX >= rect.right &&
+            event.clientX <= rect.right + hoverBuffer &&
+            event.clientY >= rect.top &&
+            event.clientY <= rect.bottom;
+          if (inBuffer) {
+            return;
+          }
+        }
+
+        setOpen(false);
+      }}
       {...props}
     >
       {children}
@@ -174,8 +204,7 @@ export const SidebarLink = ({
 }) => {
   const { open, animate } = useSidebar();
   const baseClasses = cn(
-    "flex w-full items-center gap-2 rounded-2xl px-2.5 py-2.5 text-sidebar-foreground transition-colors duration-150 group/sidebar",
-    open ? "justify-start" : "justify-center"
+    "flex w-full items-center justify-start gap-3 rounded-2xl px-3 py-2.5 text-sidebar-foreground transition-colors duration-150 group/sidebar"
   );
   const activeClasses = open
     ? "bg-sidebar-accent text-sidebar-accent-foreground shadow-[inset_0_0_0_1px_hsl(var(--sidebar-border))]"
