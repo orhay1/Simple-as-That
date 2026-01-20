@@ -1,13 +1,14 @@
 'use client';
 import { cn } from '@/lib/utils';
 import { useTheme } from 'next-themes';
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 
 type DottedSurfaceProps = Omit<React.HTMLAttributes<HTMLDivElement>, 'ref'>;
 
 export function DottedSurface({ className, ...props }: DottedSurfaceProps) {
   const { resolvedTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const sceneRef = useRef<{
@@ -20,7 +21,11 @@ export function DottedSurface({ className, ...props }: DottedSurfaceProps) {
   } | null>(null);
 
   useEffect(() => {
-    if (!containerRef.current) return;
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!containerRef.current || !mounted) return;
 
     const SEPARATION = 150;
     const AMOUNTX = 40;
@@ -167,13 +172,13 @@ export function DottedSurface({ className, ...props }: DottedSurfaceProps) {
         }
       }
     };
-  }, [resolvedTheme]);
+  }, [resolvedTheme, mounted]);
 
   return (
     <div
       ref={containerRef}
-      className={cn('absolute inset-0 pointer-events-none', className)}
-      style={{ zIndex: -1 }}
+      className={cn('fixed inset-0 pointer-events-none', className)}
+      style={{ zIndex: 0 }}
       {...props}
     />
   );
