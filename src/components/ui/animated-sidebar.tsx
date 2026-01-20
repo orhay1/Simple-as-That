@@ -99,7 +99,7 @@ export const DesktopSidebar = ({
         className
       )}
       animate={{
-        width: animate ? (open ? "300px" : "60px") : "300px",
+        width: animate ? (open ? "300px" : "84px") : "300px",
       }}
       onMouseEnter={() => setOpen(true)}
       onMouseLeave={() => setOpen(false)}
@@ -173,13 +173,22 @@ export const SidebarLink = ({
   onClick?: () => void;
 }) => {
   const { open, animate } = useSidebar();
+  const baseClasses = cn(
+    "flex w-full items-center gap-2 rounded-2xl px-2.5 py-2.5 text-sidebar-foreground transition-colors duration-150 group/sidebar",
+    open ? "justify-start" : "justify-center"
+  );
+  const activeClasses = open
+    ? "bg-sidebar-accent text-sidebar-accent-foreground shadow-[inset_0_0_0_1px_hsl(var(--sidebar-border))]"
+    : "bg-sidebar-accent text-sidebar-accent-foreground rounded-2xl shadow-[inset_0_0_0_1px_hsl(var(--sidebar-border))]";
   
   if (onClick) {
     return (
       <button
         onClick={onClick}
         className={cn(
-          "flex items-center justify-start gap-2 group/sidebar py-2 w-full text-left",
+          baseClasses,
+          "text-left",
+          "hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground",
           className
         )}
       >
@@ -204,8 +213,9 @@ export const SidebarLink = ({
     <Link
       to={link.href}
       className={cn(
-        "flex items-center justify-start gap-2 group/sidebar py-2",
-        active && "bg-sidebar-accent rounded-md px-2 -mx-2",
+        baseClasses,
+        "hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground",
+        active && activeClasses,
         className
       )}
       {...props}
