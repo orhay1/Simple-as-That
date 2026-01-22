@@ -21,6 +21,143 @@ interface GenerateRequest {
   language?: string;
 }
 
+// ==================== INPUT VALIDATION ====================
+
+const ALLOWED_LANGUAGES = ['en', 'he', 'es', 'fr', 'de', 'ar'];
+
+interface ValidationResult {
+  valid: boolean;
+  error?: string;
+  sanitized?: Record<string, any>;
+}
+
+function sanitizeString(value: unknown, maxLength: number): string | null {
+  if (typeof value !== 'string') return null;
+  // Remove control characters except newlines and tabs
+  return value.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '').substring(0, maxLength);
+}
+
+function validateInputs(type: GenerationType, inputs: Record<string, any>, language?: string): ValidationResult {
+  const sanitized: Record<string, any> = {};
+  
+  // Validate language if provided
+  if (language !== undefined) {
+    if (typeof language !== 'string' || !ALLOWED_LANGUAGES.includes(language)) {
+      return { valid: false, error: `Invalid language. Allowed: ${ALLOWED_LANGUAGES.join(', ')}` };
+    }
+  }
+  
+  // Type-specific validation
+  switch (type) {
+    case 'draft': {
+      // Required: title
+      const title = sanitizeString(inputs.title, 500);
+      if (!title) {
+        return { valid: false, error: 'Title is required and must be a string (max 500 chars)' };
+      }
+      sanitized.title = title;
+      
+      // Optional: summary, full_content, source_url
+      if (inputs.summary !== undefined) {
+        const summary = sanitizeString(inputs.summary, 5000);
+        if (summary === null) {
+          return { valid: false, error: 'Summary must be a string (max 5000 chars)' };
+        }
+        sanitized.summary = summary;
+      }
+      
+      if (inputs.full_content !== undefined) {
+        const fullContent = sanitizeString(inputs.full_content, 50000);
+        if (fullContent === null) {
+          return { valid: false, error: 'Full content must be a string (max 50000 chars)' };
+        }
+        sanitized.full_content = fullContent;
+      }
+      
+      if (inputs.source_url !== undefined) {
+        const sourceUrl = sanitizeString(inputs.source_url, 2048);
+        if (sourceUrl === null) {
+          return { valid: false, error: 'Source URL must be a string (max 2048 chars)' };
+        }
+        sanitized.source_url = sourceUrl;
+      }
+      break;
+    }
+    
+    case 'hashtags':
+    case 'hashtags_free': {
+      // Required: body
+      const body = sanitizeString(inputs.body, 10000);
+      if (!body) {
+        return { valid: false, error: 'Body is required and must be a string (max 10000 chars)' };
+      }
+      sanitized.body = body;
+      
+      // Optional: title
+      if (inputs.title !== undefined) {
+        const title = sanitizeString(inputs.title, 500);
+        if (title === null) {
+          return { valid: false, error: 'Title must be a string (max 500 chars)' };
+        }
+        sanitized.title = title;
+      }
+      break;
+    }
+    
+    case 'rewrite': {
+      // Required: body, action
+      const body = sanitizeString(inputs.body, 10000);
+      if (!body) {
+        return { valid: false, error: 'Body is required and must be a string (max 10000 chars)' };
+      }
+      sanitized.body = body;
+      
+      const validActions = ['tighten', 'expand', 'add_cta', 'founder_tone', 'educational_tone', 
+                           'contrarian_tone', 'story_tone', 'translate_he', 'translate_en'];
+      const action = sanitizeString(inputs.action, 50);
+      if (!action || !validActions.includes(action)) {
+        return { valid: false, error: `Action must be one of: ${validActions.join(', ')}` };
+      }
+      sanitized.action = action;
+      
+      // Optional: language
+      if (inputs.language !== undefined) {
+        if (typeof inputs.language !== 'string' || !ALLOWED_LANGUAGES.includes(inputs.language)) {
+          return { valid: false, error: `Invalid language in inputs. Allowed: ${ALLOWED_LANGUAGES.join(', ')}` };
+        }
+        sanitized.language = inputs.language;
+      }
+      break;
+    }
+    
+    case 'image_description': {
+      // Required: body
+      const body = sanitizeString(inputs.body, 10000);
+      if (!body) {
+        return { valid: false, error: 'Body is required and must be a string (max 10000 chars)' };
+      }
+      sanitized.body = body;
+      
+      // Optional: title
+      if (inputs.title !== undefined) {
+        const title = sanitizeString(inputs.title, 500);
+        if (title === null) {
+          return { valid: false, error: 'Title must be a string (max 500 chars)' };
+        }
+        sanitized.title = title;
+      }
+      break;
+    }
+    
+    default:
+      return { valid: false, error: `Unknown generation type: ${type}` };
+  }
+  
+  return { valid: true, sanitized };
+}
+
+// ==================== END INPUT VALIDATION ====================
+
 async function getPromptFromSettings(key: string, userId?: string): Promise<string | null> {
   let query = supabase
     .from('settings')
@@ -51,6 +188,7 @@ function interpolatePlaceholders(template: string, inputs: Record<string, any>):
 }
 
 async function logToLedger(entry: {
+  user_id: string;
   generation_type: string;
   system_prompt?: string;
   user_prompt?: string;
@@ -158,6 +296,7 @@ Return ONLY the JSON array, no additional text or explanation.`;
 
   // Log to ledger
   await logToLedger({
+    user_id: userId,
     generation_type: 'topics',
     system_prompt: systemPrompt,
     user_prompt: userPrompt,
@@ -288,6 +427,7 @@ Return ONLY the JSON object, no additional text or explanation.`;
 
   // Log to ledger
   await logToLedger({
+    user_id: userId!,
     generation_type: 'draft',
     system_prompt: systemPrompt,
     user_prompt: userPrompt,
@@ -301,7 +441,7 @@ Return ONLY the JSON object, no additional text or explanation.`;
   return { draft: parsed, usage };
 }
 
-async function generateHashtags(inputs: Record<string, any>, userId?: string) {
+async function generateHashtags(inputs: Record<string, any>, userId: string) {
   const { body, title } = inputs;
   
   // Use 'hashtag_generator_prompt' to match Settings UI key
@@ -366,6 +506,7 @@ Return ONLY the JSON object, no additional text.`;
   }
 
   await logToLedger({
+    user_id: userId,
     generation_type: 'hashtags',
     system_prompt: systemPrompt,
     user_prompt: userPrompt,
@@ -380,7 +521,7 @@ Return ONLY the JSON object, no additional text.`;
 }
 
 // Generate hashtags using Lovable AI (Free tier - Gemini)
-async function generateHashtagsFree(inputs: Record<string, any>) {
+async function generateHashtagsFree(inputs: Record<string, any>, userId: string) {
   const { body, title } = inputs;
   
   const lovableApiKey = Deno.env.get('LOVABLE_API_KEY');
@@ -480,6 +621,7 @@ Return ONLY the JSON object, no additional text.`;
   }
 
   await logToLedger({
+    user_id: userId,
     generation_type: 'hashtags_free',
     system_prompt: systemPrompt,
     user_prompt: userPrompt,
@@ -493,7 +635,7 @@ Return ONLY the JSON object, no additional text.`;
   return { hashtags, usage: data.usage };
 }
 
-async function rewriteContent(inputs: Record<string, any>) {
+async function rewriteContent(inputs: Record<string, any>, userId: string) {
   const { body, action, language = 'en' } = inputs;
   
   const languageNames: Record<string, string> = {
@@ -613,6 +755,7 @@ async function rewriteContent(inputs: Record<string, any>) {
   const { content, usage } = await callOpenAI(systemPrompt, userPrompt, 'gpt-4o-mini');
 
   await logToLedger({
+    user_id: userId,
     generation_type: 'rewrite',
     system_prompt: systemPrompt,
     user_prompt: userPrompt,
@@ -626,7 +769,7 @@ async function rewriteContent(inputs: Record<string, any>) {
   return { rewritten: content, usage };
 }
 
-async function generateImageDescription(inputs: Record<string, any>, userId?: string) {
+async function generateImageDescription(inputs: Record<string, any>, userId: string) {
   const { title, body } = inputs;
   
   const customPrompt = await getPromptFromSettings('image_generator_prompt', userId);
@@ -677,6 +820,7 @@ Make it specific to THIS tool's function. No generic professional imagery.`;
   const { content, usage } = await callOpenAI(systemPrompt, userPrompt, 'gpt-4o-mini');
 
   await logToLedger({
+    user_id: userId,
     generation_type: 'image_description',
     system_prompt: systemPrompt,
     user_prompt: userPrompt,
@@ -719,24 +863,36 @@ serve(async (req) => {
 
     // User is authenticated, proceed with request
     const { type, inputs = {}, language }: GenerateRequest = await req.json();
-    console.log(`Processing ${type} generation request for user ${user.id}`, inputs);
+    
+    // Validate inputs before processing
+    const validation = validateInputs(type, inputs, language);
+    if (!validation.valid) {
+      console.error('Input validation failed:', validation.error);
+      return new Response(JSON.stringify({ error: validation.error }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+    
+    const sanitizedInputs = validation.sanitized!;
+    console.log(`Processing ${type} generation request for user ${user.id}`);
 
     let result;
     switch (type) {
       case 'draft':
-        result = await generateDraft(inputs, language || inputs.language || 'en', user.id);
+        result = await generateDraft(sanitizedInputs, language || sanitizedInputs.language || 'en', user.id);
         break;
       case 'hashtags':
-        result = await generateHashtags(inputs, user.id);
+        result = await generateHashtags(sanitizedInputs, user.id);
         break;
       case 'hashtags_free':
-        result = await generateHashtagsFree(inputs);
+        result = await generateHashtagsFree(sanitizedInputs, user.id);
         break;
       case 'rewrite':
-        result = await rewriteContent(inputs);
+        result = await rewriteContent(sanitizedInputs, user.id);
         break;
       case 'image_description':
-        result = await generateImageDescription(inputs, user.id);
+        result = await generateImageDescription(sanitizedInputs, user.id);
         break;
       default:
         throw new Error(`Unknown generation type: ${type}`);

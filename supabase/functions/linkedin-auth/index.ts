@@ -10,26 +10,85 @@ const LINKEDIN_CLIENT_ID = Deno.env.get('LINKEDIN_CLIENT_ID')!;
 const LINKEDIN_CLIENT_SECRET = Deno.env.get('LINKEDIN_CLIENT_SECRET')!;
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+const OAUTH_STATE_SECRET = Deno.env.get('OAUTH_STATE_SECRET')!;
 
 const REDIRECT_URI = `${SUPABASE_URL}/functions/v1/linkedin-auth`;
 
-// Generate a cryptographically secure state token with HMAC signature
-function generateSecureState(userId: string, timestamp: number): string {
-  const stateData = { userId, timestamp };
-  // In production, use a proper HMAC with a secret key
-  // For now, use base64 encoding with the timestamp for validation
-  return btoa(JSON.stringify(stateData));
+// Convert ArrayBuffer to hex string
+function arrayBufferToHex(buffer: ArrayBuffer): string {
+  return Array.from(new Uint8Array(buffer))
+    .map(b => b.toString(16).padStart(2, '0'))
+    .join('');
 }
 
-// Validate state token
-function validateState(state: string): { userId: string; timestamp: number } | null {
+// Convert hex string to Uint8Array
+function hexToUint8Array(hex: string): Uint8Array {
+  const bytes = new Uint8Array(hex.length / 2);
+  for (let i = 0; i < hex.length; i += 2) {
+    bytes[i / 2] = parseInt(hex.substr(i, 2), 16);
+  }
+  return bytes;
+}
+
+// Generate a cryptographically secure state token with HMAC signature
+async function generateSecureState(userId: string, timestamp: number): Promise<string> {
+  const data = JSON.stringify({ userId, timestamp });
+  
+  const key = await crypto.subtle.importKey(
+    "raw",
+    new TextEncoder().encode(OAUTH_STATE_SECRET),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"]
+  );
+  
+  const signature = await crypto.subtle.sign(
+    "HMAC",
+    key,
+    new TextEncoder().encode(data)
+  );
+  
+  const signatureHex = arrayBufferToHex(signature);
+  return btoa(JSON.stringify({ userId, timestamp, sig: signatureHex }));
+}
+
+// Validate state token with HMAC verification
+async function validateState(state: string): Promise<{ userId: string; timestamp: number } | null> {
   try {
     const decoded = JSON.parse(atob(state));
-    if (!decoded.userId || !decoded.timestamp) {
+    if (!decoded.userId || !decoded.timestamp || !decoded.sig) {
+      console.error('State token missing required fields');
       return null;
     }
-    return decoded;
-  } catch {
+    
+    // Recreate the data that was signed
+    const data = JSON.stringify({ userId: decoded.userId, timestamp: decoded.timestamp });
+    
+    // Import the key and verify the signature
+    const key = await crypto.subtle.importKey(
+      "raw",
+      new TextEncoder().encode(OAUTH_STATE_SECRET),
+      { name: "HMAC", hash: "SHA-256" },
+      false,
+      ["verify"]
+    );
+    
+    const expectedSignature = hexToUint8Array(decoded.sig);
+    const isValid = await crypto.subtle.verify(
+      "HMAC",
+      key,
+      expectedSignature.buffer as ArrayBuffer,
+      new TextEncoder().encode(data)
+    );
+    
+    if (!isValid) {
+      console.error('HMAC signature verification failed - possible tampering');
+      return null;
+    }
+    
+    return { userId: decoded.userId, timestamp: decoded.timestamp };
+  } catch (e) {
+    console.error('State validation error:', e);
     return null;
   }
 }
@@ -73,7 +132,7 @@ serve(async (req) => {
 
       // Use authenticated user ID (not from query param)
       const userId = user.id;
-      const state = generateSecureState(userId, Date.now());
+      const state = await generateSecureState(userId, Date.now());
       const scopes = 'openid profile w_member_social';
       
       const authUrl = `https://www.linkedin.com/oauth/v2/authorization?` +
@@ -97,9 +156,9 @@ serve(async (req) => {
       const code = url.searchParams.get('code')!;
       const state = url.searchParams.get('state')!;
       
-      const stateData = validateState(state);
+      const stateData = await validateState(state);
       if (!stateData) {
-        console.error('Invalid state parameter - failed to decode');
+        console.error('Invalid state parameter - failed to decode or HMAC verification failed');
         return redirectWithError('Invalid state parameter');
       }
 
@@ -247,6 +306,10 @@ serve(async (req) => {
             is_connected: false,
             access_token: null,
             refresh_token: null,
+            profile_name: null,
+            avatar_url: null,
+            headline: null,
+            profile_id: null,
             updated_at: new Date().toISOString(),
           })
           .eq('user_id', user.id);

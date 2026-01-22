@@ -4,6 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
@@ -14,7 +15,7 @@ import { useLinkedIn } from '@/hooks/useLinkedIn';
 import { usePublications } from '@/hooks/usePublications';
 import { useTranslation } from '@/hooks/useTranslation';
 import { DraftEditorSheet } from '@/components/drafts/DraftEditorSheet';
-import { Plus, Edit, Trash2, CheckCircle, Send, Loader2, ChevronDown, Link, Linkedin } from 'lucide-react';
+import { Plus, Edit, Trash2, CheckCircle, Send, Loader2, ChevronDown, Link, Linkedin, CheckSquare, X } from 'lucide-react';
 import { PostStatus, PostDraftWithAsset, DraftVersion } from '@/types/database';
 import { toast } from 'sonner';
 
@@ -58,6 +59,36 @@ export default function Drafts() {
   const [publishUrl, setPublishUrl] = useState('');
   const [publishingDraftId, setPublishingDraftId] = useState<string | null>(null);
   const [isGeneratingImage, setIsGeneratingImage] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(id)) {
+        newSet.delete(id);
+      } else {
+        newSet.add(id);
+      }
+      return newSet;
+    });
+  };
+
+  const selectAll = () => {
+    setSelectedIds(new Set(drafts.map(d => d.id)));
+  };
+
+  const clearSelection = () => {
+    setSelectedIds(new Set());
+  };
+
+  const handleBatchDelete = () => {
+    if (selectedIds.size === 0) return;
+    selectedIds.forEach(id => {
+      deleteDraft.mutate(id);
+    });
+    toast.success(`${t.common.delete} ${selectedIds.size}`);
+    clearSelection();
+  };
 
   const handleCreate = () => {
     if (!title.trim() || !body.trim()) return;
@@ -359,12 +390,48 @@ export default function Drafts() {
           </Dialog>
         </div>
 
+        {/* Batch Action Bar */}
+        {selectedIds.size > 0 && (
+          <div className="sticky top-0 z-10 flex items-center justify-between gap-4 p-3 bg-primary/10 border border-primary/20 rounded-lg">
+            <div className="flex items-center gap-2">
+              <CheckSquare className="h-4 w-4 text-primary" />
+              <span className="font-medium">{selectedIds.size} {t.topics.selected}</span>
+              <Button variant="ghost" size="sm" className="h-7 px-2" onClick={clearSelection}>
+                <X className="h-3 w-3 me-1" />
+                {t.topics.clear}
+              </Button>
+            </div>
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" onClick={handleBatchDelete}>
+                <Trash2 className="h-4 w-4 me-1" />
+                {t.common.delete} ({selectedIds.size})
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {/* Select All Button */}
+        {drafts.length > 0 && (
+          <div className="flex justify-end">
+            <Button variant="ghost" size="sm" onClick={selectAll}>
+              {t.topics.selectAll}
+            </Button>
+          </div>
+        )}
+
         <div className="grid gap-4">
           {drafts.map((draft) => (
-            <Card key={draft.id}>
+            <Card key={draft.id} className={selectedIds.has(draft.id) ? 'ring-2 ring-primary/50' : ''}>
               <CardHeader className="pb-2">
                 <div className="flex items-start justify-between">
-                  <CardTitle className="text-lg">{draft.title}</CardTitle>
+                  <div className="flex items-center gap-3">
+                    <Checkbox
+                      checked={selectedIds.has(draft.id)}
+                      onCheckedChange={() => toggleSelect(draft.id)}
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                    <CardTitle className="text-lg">{draft.title}</CardTitle>
+                  </div>
                   <Badge className={statusColors[draft.status as PostStatus] || statusColors.draft}>
                     {t.drafts.status[draft.status as keyof typeof t.drafts.status] || draft.status}
                   </Badge>
@@ -451,9 +518,9 @@ export default function Drafts() {
           isGeneratingImage={isGeneratingImage}
           isFetchingSourceImage={isFetchingSourceImage}
           hasLinkedResearch={!!editDraft?.news_item_id}
-          profileName={connection?.profile_name || undefined}
-          profileAvatar={connection?.avatar_url || undefined}
-          profileHeadline={connection?.headline || undefined}
+          profileName={isConnected ? connection?.profile_name : undefined}
+          profileAvatar={isConnected ? connection?.avatar_url : undefined}
+          profileHeadline={isConnected ? connection?.headline : undefined}
         />
 
         <Dialog open={publishDialogOpen} onOpenChange={setPublishDialogOpen}>
