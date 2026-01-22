@@ -84,6 +84,7 @@ export type Database = {
           raw_output: string | null
           system_prompt: string | null
           token_usage: Json | null
+          user_id: string | null
           user_prompt: string | null
         }
         Insert: {
@@ -98,6 +99,7 @@ export type Database = {
           raw_output?: string | null
           system_prompt?: string | null
           token_usage?: Json | null
+          user_id?: string | null
           user_prompt?: string | null
         }
         Update: {
@@ -112,6 +114,7 @@ export type Database = {
           raw_output?: string | null
           system_prompt?: string | null
           token_usage?: Json | null
+          user_id?: string | null
           user_prompt?: string | null
         }
         Relationships: []
