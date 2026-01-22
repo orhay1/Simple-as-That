@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { AssetCard } from '@/components/assets/AssetCard';
 import { AssetDetailDialog } from '@/components/assets/AssetDetailDialog';
@@ -8,8 +9,9 @@ import { FileUploadButton } from '@/components/assets/FileUploadButton';
 import { useAssets } from '@/hooks/useAssets';
 import { useTranslation } from '@/hooks/useTranslation';
 import { Asset } from '@/types/database';
-import { Search, ImageIcon, Loader2 } from 'lucide-react';
+import { Search, ImageIcon, Loader2, CheckSquare, X, Trash2 } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { toast } from 'sonner';
 
 type FilterType = 'all' | 'ai' | 'uploaded';
 
@@ -20,6 +22,7 @@ export default function Assets() {
   const [filter, setFilter] = useState<FilterType>('all');
   const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   const filteredAssets = assets?.filter((asset) => {
     const matchesSearch = !search || asset.prompt?.toLowerCase().includes(search.toLowerCase());
@@ -29,6 +32,35 @@ export default function Assets() {
       !asset.is_ai_generated;
     return matchesSearch && matchesFilter;
   }) || [];
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(id)) {
+        newSet.delete(id);
+      } else {
+        newSet.add(id);
+      }
+      return newSet;
+    });
+  };
+
+  const selectAll = () => {
+    setSelectedIds(new Set(filteredAssets.map(a => a.id)));
+  };
+
+  const clearSelection = () => {
+    setSelectedIds(new Set());
+  };
+
+  const handleBatchDelete = () => {
+    if (selectedIds.size === 0) return;
+    selectedIds.forEach(id => {
+      deleteAsset.mutate(id);
+    });
+    toast.success(`${t.common.delete} ${selectedIds.size}`);
+    clearSelection();
+  };
 
   const handleDelete = (id: string) => {
     setDeleteId(id);
@@ -73,6 +105,26 @@ export default function Assets() {
           </Tabs>
         </div>
 
+        {/* Batch Action Bar */}
+        {selectedIds.size > 0 && (
+          <div className="sticky top-0 z-10 flex items-center justify-between gap-4 p-3 bg-primary/10 border border-primary/20 rounded-lg">
+            <div className="flex items-center gap-2">
+              <CheckSquare className="h-4 w-4 text-primary" />
+              <span className="font-medium">{selectedIds.size} {t.topics.selected}</span>
+              <Button variant="ghost" size="sm" className="h-7 px-2" onClick={clearSelection}>
+                <X className="h-3 w-3 me-1" />
+                {t.topics.clear}
+              </Button>
+            </div>
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" onClick={handleBatchDelete}>
+                <Trash2 className="h-4 w-4 me-1" />
+                {t.common.delete} ({selectedIds.size})
+              </Button>
+            </div>
+          </div>
+        )}
+
         {/* Content */}
         {isLoading ? (
           <div className="flex items-center justify-center py-12">
@@ -84,16 +136,26 @@ export default function Assets() {
             <p className="text-lg">{t.assets.noAssets}</p>
           </div>
         ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-            {filteredAssets.map((asset) => (
-              <AssetCard
-                key={asset.id}
-                asset={asset}
-                onView={setSelectedAsset}
-                onDelete={handleDelete}
-              />
-            ))}
-          </div>
+          <>
+            {/* Select All Button */}
+            <div className="flex justify-end">
+              <Button variant="ghost" size="sm" onClick={selectAll}>
+                {t.topics.selectAll}
+              </Button>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+              {filteredAssets.map((asset) => (
+                <AssetCard
+                  key={asset.id}
+                  asset={asset}
+                  isSelected={selectedIds.has(asset.id)}
+                  onToggleSelect={() => toggleSelect(asset.id)}
+                  onView={setSelectedAsset}
+                  onDelete={handleDelete}
+                />
+              ))}
+            </div>
+          </>
         )}
       </div>
 
