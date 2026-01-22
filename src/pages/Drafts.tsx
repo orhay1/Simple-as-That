@@ -451,9 +451,9 @@ export default function Drafts() {
           isGeneratingImage={isGeneratingImage}
           isFetchingSourceImage={isFetchingSourceImage}
           hasLinkedResearch={!!editDraft?.news_item_id}
-          profileName={connection?.profile_name || undefined}
-          profileAvatar={connection?.avatar_url || undefined}
-          profileHeadline={connection?.headline || undefined}
+          profileName={isConnected ? connection?.profile_name : undefined}
+          profileAvatar={isConnected ? connection?.avatar_url : undefined}
+          profileHeadline={isConnected ? connection?.headline : undefined}
         />
 
         <Dialog open={publishDialogOpen} onOpenChange={setPublishDialogOpen}>

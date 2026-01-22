@@ -306,6 +306,10 @@ serve(async (req) => {
             is_connected: false,
             access_token: null,
             refresh_token: null,
+            profile_name: null,
+            avatar_url: null,
+            headline: null,
+            profile_id: null,
             updated_at: new Date().toISOString(),
           })
           .eq('user_id', user.id);
