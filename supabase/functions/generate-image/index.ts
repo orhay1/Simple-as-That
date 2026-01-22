@@ -292,6 +292,7 @@ serve(async (req) => {
 
     // Log to ledger
     await supabase.from('ai_output_ledger').insert({
+      user_id: user.id,
       generation_type: 'image',
       user_prompt: prompt,
       raw_output: JSON.stringify({ storage_path: fileName }),

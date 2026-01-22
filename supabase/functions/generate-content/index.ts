@@ -51,6 +51,7 @@ function interpolatePlaceholders(template: string, inputs: Record<string, any>):
 }
 
 async function logToLedger(entry: {
+  user_id: string;
   generation_type: string;
   system_prompt?: string;
   user_prompt?: string;
@@ -158,6 +159,7 @@ Return ONLY the JSON array, no additional text or explanation.`;
 
   // Log to ledger
   await logToLedger({
+    user_id: userId,
     generation_type: 'topics',
     system_prompt: systemPrompt,
     user_prompt: userPrompt,
@@ -288,6 +290,7 @@ Return ONLY the JSON object, no additional text or explanation.`;
 
   // Log to ledger
   await logToLedger({
+    user_id: userId!,
     generation_type: 'draft',
     system_prompt: systemPrompt,
     user_prompt: userPrompt,
@@ -301,7 +304,7 @@ Return ONLY the JSON object, no additional text or explanation.`;
   return { draft: parsed, usage };
 }
 
-async function generateHashtags(inputs: Record<string, any>, userId?: string) {
+async function generateHashtags(inputs: Record<string, any>, userId: string) {
   const { body, title } = inputs;
   
   // Use 'hashtag_generator_prompt' to match Settings UI key
@@ -366,6 +369,7 @@ Return ONLY the JSON object, no additional text.`;
   }
 
   await logToLedger({
+    user_id: userId,
     generation_type: 'hashtags',
     system_prompt: systemPrompt,
     user_prompt: userPrompt,
@@ -380,7 +384,7 @@ Return ONLY the JSON object, no additional text.`;
 }
 
 // Generate hashtags using Lovable AI (Free tier - Gemini)
-async function generateHashtagsFree(inputs: Record<string, any>) {
+async function generateHashtagsFree(inputs: Record<string, any>, userId: string) {
   const { body, title } = inputs;
   
   const lovableApiKey = Deno.env.get('LOVABLE_API_KEY');
@@ -480,6 +484,7 @@ Return ONLY the JSON object, no additional text.`;
   }
 
   await logToLedger({
+    user_id: userId,
     generation_type: 'hashtags_free',
     system_prompt: systemPrompt,
     user_prompt: userPrompt,
@@ -493,7 +498,7 @@ Return ONLY the JSON object, no additional text.`;
   return { hashtags, usage: data.usage };
 }
 
-async function rewriteContent(inputs: Record<string, any>) {
+async function rewriteContent(inputs: Record<string, any>, userId: string) {
   const { body, action, language = 'en' } = inputs;
   
   const languageNames: Record<string, string> = {
@@ -613,6 +618,7 @@ async function rewriteContent(inputs: Record<string, any>) {
   const { content, usage } = await callOpenAI(systemPrompt, userPrompt, 'gpt-4o-mini');
 
   await logToLedger({
+    user_id: userId,
     generation_type: 'rewrite',
     system_prompt: systemPrompt,
     user_prompt: userPrompt,
@@ -626,7 +632,7 @@ async function rewriteContent(inputs: Record<string, any>) {
   return { rewritten: content, usage };
 }
 
-async function generateImageDescription(inputs: Record<string, any>, userId?: string) {
+async function generateImageDescription(inputs: Record<string, any>, userId: string) {
   const { title, body } = inputs;
   
   const customPrompt = await getPromptFromSettings('image_generator_prompt', userId);
@@ -677,6 +683,7 @@ Make it specific to THIS tool's function. No generic professional imagery.`;
   const { content, usage } = await callOpenAI(systemPrompt, userPrompt, 'gpt-4o-mini');
 
   await logToLedger({
+    user_id: userId,
     generation_type: 'image_description',
     system_prompt: systemPrompt,
     user_prompt: userPrompt,
@@ -730,10 +737,10 @@ serve(async (req) => {
         result = await generateHashtags(inputs, user.id);
         break;
       case 'hashtags_free':
-        result = await generateHashtagsFree(inputs);
+        result = await generateHashtagsFree(inputs, user.id);
         break;
       case 'rewrite':
-        result = await rewriteContent(inputs);
+        result = await rewriteContent(inputs, user.id);
         break;
       case 'image_description':
         result = await generateImageDescription(inputs, user.id);
