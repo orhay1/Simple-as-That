@@ -2,6 +2,7 @@ import { Asset } from '@/types/database';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { MoreVertical, Trash2, Copy, ExternalLink, Sparkles, AlertTriangle } from 'lucide-react';
 import { format } from 'date-fns';
@@ -14,11 +15,13 @@ const isValidUrl = (url: string | null | undefined): boolean => {
 
 interface AssetCardProps {
   asset: Asset;
+  isSelected?: boolean;
+  onToggleSelect?: () => void;
   onView: (asset: Asset) => void;
   onDelete: (id: string) => void;
 }
 
-export function AssetCard({ asset, onView, onDelete }: AssetCardProps) {
+export function AssetCard({ asset, isSelected, onToggleSelect, onView, onDelete }: AssetCardProps) {
   const validUrl = isValidUrl(asset.file_url);
 
   const handleCopyUrl = (e: React.MouseEvent) => {
@@ -38,11 +41,24 @@ export function AssetCard({ asset, onView, onDelete }: AssetCardProps) {
 
   return (
     <Card 
-      className="group cursor-pointer overflow-hidden hover:ring-2 hover:ring-primary/50 transition-all"
+      className={`group cursor-pointer overflow-hidden hover:ring-2 hover:ring-primary/50 transition-all ${isSelected ? 'ring-2 ring-primary' : ''}`}
       onClick={() => onView(asset)}
     >
       <CardContent className="p-0">
         <div className="relative aspect-square bg-muted">
+          {/* Checkbox for selection */}
+          {onToggleSelect && (
+            <div 
+              className="absolute top-2 left-2 z-10"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <Checkbox
+                checked={isSelected}
+                onCheckedChange={onToggleSelect}
+                className="bg-background/80"
+              />
+            </div>
+          )}
           {asset.file_url ? (
             <img
               src={asset.file_url}
