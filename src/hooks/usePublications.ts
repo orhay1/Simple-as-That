@@ -67,11 +67,30 @@ export function usePublications() {
     },
   });
 
+  const deletePublication = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from('publications')
+        .delete()
+        .eq('id', id);
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['publications'] });
+      toast.success('Publication deleted successfully');
+    },
+    onError: (error) => {
+      toast.error('Failed to delete publication: ' + error.message);
+    },
+  });
+
   return {
     publications,
     isLoading,
     error,
     createPublication,
     updatePublication,
+    deletePublication,
   };
 }
