@@ -111,15 +111,15 @@ export default function Assets() {
             <div className="flex items-center gap-2">
               <CheckSquare className="h-4 w-4 text-primary" />
               <span className="font-medium">{selectedIds.size} {t.topics.selected}</span>
-              <Button variant="ghost" size="sm" className="h-7 px-2" onClick={clearSelection}>
-                <X className="h-3 w-3 me-1" />
-                {t.topics.clear}
-              </Button>
             </div>
             <div className="flex gap-2">
               <Button variant="outline" size="sm" onClick={handleBatchDelete}>
                 <Trash2 className="h-4 w-4 me-1" />
                 {t.common.delete} ({selectedIds.size})
+              </Button>
+              <Button variant="ghost" size="sm" className="h-7 px-2" onClick={clearSelection}>
+                <X className="h-3 w-3 me-1" />
+                {t.topics.clear}
               </Button>
             </div>
           </div>

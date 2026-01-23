@@ -188,10 +188,6 @@ export default function Topics() {
                 <div className="flex items-center gap-2">
                   <CheckSquare className="h-4 w-4 text-primary" />
                   <span className="font-medium">{selectedIds.size} {t.topics.selected}</span>
-                  <Button variant="ghost" size="sm" className="h-7 px-2" onClick={clearSelection}>
-                    <X className="h-3 w-3 mr-1" />
-                    {t.topics.clear}
-                  </Button>
                 </div>
                 <div className="flex gap-2">
                   <Button variant="outline" size="sm" onClick={handleBatchDelete}>
@@ -201,6 +197,10 @@ export default function Topics() {
                   <Button size="sm" onClick={handleBatchToDraft}>
                     <FileEdit className="h-4 w-4 mr-1" />
                     {t.topics.toDrafts} ({selectedIds.size})
+                  </Button>
+                  <Button variant="ghost" size="sm" className="h-8 px-2" onClick={clearSelection}>
+                    <X className="h-3 w-3 mr-1" />
+                    {t.topics.clear}
                   </Button>
                 </div>
               </div>
