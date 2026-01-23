@@ -45,14 +45,20 @@ export function useAssets() {
 
   const deleteAsset = useMutation({
     mutationFn: async (id: string) => {
-      // First get the asset to find the file path
+      // Step 1: Unlink this asset from any drafts that reference it
+      await supabase
+        .from('post_drafts')
+        .update({ image_asset_id: null })
+        .eq('image_asset_id', id);
+
+      // Step 2: Get the asset to find the file path for storage cleanup
       const { data: asset } = await supabase
         .from('assets')
         .select('file_url')
         .eq('id', id)
         .single();
 
-      // Delete from appropriate storage bucket
+      // Step 3: Delete from appropriate storage bucket
       if (asset?.file_url?.includes('/ai-images/')) {
         const fileName = asset.file_url.split('/ai-images/').pop();
         if (fileName) {
@@ -65,6 +71,7 @@ export function useAssets() {
         }
       }
 
+      // Step 4: Delete the asset record
       const { error } = await supabase.from('assets').delete().eq('id', id);
       if (error) throw error;
     },
