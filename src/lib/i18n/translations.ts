@@ -201,6 +201,27 @@ export interface Translations {
     contentLanguageDescription: string;
     english: string;
     hebrew: string;
+    account: string;
+  };
+  settingsAccount: {
+    title: string;
+    description: string;
+    email: string;
+    displayName: string;
+    memberSince: string;
+    dangerZone: string;
+    dangerDescription: string;
+    deleteAccount: string;
+    deleteTitle: string;
+    deleteWarning: string;
+    deleteItem1: string;
+    deleteItem2: string;
+    deleteItem3: string;
+    deleteItem4: string;
+    typeDelete: string;
+    deleting: string;
+    deleteSuccess: string;
+    deleteFailed: string;
   };
   settingsPrompts: {
     title: string;
@@ -479,6 +500,27 @@ export const translations: Record<Language, Translations> = {
       contentLanguageDescription: 'The default language for generating LinkedIn posts',
       english: 'English',
       hebrew: 'עברית (Hebrew)',
+      account: 'Account',
+    },
+    settingsAccount: {
+      title: 'Account Information',
+      description: 'View your account details',
+      email: 'Email',
+      displayName: 'Display Name',
+      memberSince: 'Member Since',
+      dangerZone: 'Danger Zone',
+      dangerDescription: 'Permanently delete your account and all associated data',
+      deleteAccount: 'Delete Account',
+      deleteTitle: 'Delete Account Permanently',
+      deleteWarning: 'This action cannot be undone. This will permanently delete:',
+      deleteItem1: 'All your drafts and published posts',
+      deleteItem2: 'All your topics and research data',
+      deleteItem3: 'All your images and assets',
+      deleteItem4: 'Your LinkedIn connection and settings',
+      typeDelete: 'Type DELETE to confirm',
+      deleting: 'Deleting...',
+      deleteSuccess: 'Account deleted successfully',
+      deleteFailed: 'Failed to delete account. Please try again.',
     },
     settingsPrompts: {
       title: 'AI Prompts',
@@ -755,6 +797,27 @@ export const translations: Record<Language, Translations> = {
       contentLanguageDescription: 'שפת ברירת המחדל ליצירת פוסטים בלינקדאין',
       english: 'English (אנגלית)',
       hebrew: 'עברית',
+      account: 'חשבון',
+    },
+    settingsAccount: {
+      title: 'פרטי חשבון',
+      description: 'צפה בפרטי החשבון שלך',
+      email: 'אימייל',
+      displayName: 'שם תצוגה',
+      memberSince: 'חבר מאז',
+      dangerZone: 'אזור סכנה',
+      dangerDescription: 'מחק לצמיתות את החשבון שלך ואת כל הנתונים המשויכים',
+      deleteAccount: 'מחק חשבון',
+      deleteTitle: 'מחק חשבון לצמיתות',
+      deleteWarning: 'לא ניתן לבטל פעולה זו. הפעולה תמחק לצמיתות:',
+      deleteItem1: 'כל הטיוטות והפוסטים שפורסמו',
+      deleteItem2: 'כל הנושאים ונתוני המחקר',
+      deleteItem3: 'כל התמונות והנכסים',
+      deleteItem4: 'חיבור הלינקדאין וההגדרות שלך',
+      typeDelete: 'הקלד DELETE לאישור',
+      deleting: 'מוחק...',
+      deleteSuccess: 'החשבון נמחק בהצלחה',
+      deleteFailed: 'מחיקת החשבון נכשלה. נסה שוב.',
     },
     settingsPrompts: {
       title: 'פרומפטים של AI',
