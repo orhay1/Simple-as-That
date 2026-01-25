@@ -23,3 +23,6 @@ verify_jwt = false
 
 [functions.delete-account]
 verify_jwt = false
+
+[functions.cleanup-user-storage]
+verify_jwt = false
