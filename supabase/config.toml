@@ -20,3 +20,9 @@ verify_jwt = false
 
 [functions.fetch-source-image]
 verify_jwt = false
+
+[functions.delete-account]
+verify_jwt = false
+
+[functions.cleanup-user-storage]
+verify_jwt = false

@@ -86,11 +86,18 @@ OUTPUT FORMAT - Return a JSON array. Each tool must have:
 - summary: Brief 2-sentence description of what it does
 - source_url: The tool's DIRECT page URL - must be one of:
   * Official website (e.g., cursor.sh, notion.com)
-  * GitHub repo (e.g., github.com/user/repo)
+  * GitHub repo (e.g., github.com/anthropics/claude-code)
   * Direct Taaft tool page: theresanaiforthat.com/ai/{tool-slug}/ (NOT category pages)
   NEVER use: /s/..., /just-released/, /trending/, or any listing/category pages
 - tool_name: The exact tool/project name
 - tags: 3-5 tags like ["open-source", "llm", "coding", "free"]
+
+CRITICAL URL RULES:
+- ONLY include URLs you found in your search results (from citations)
+- NEVER fabricate or guess GitHub URLs
+- GitHub URLs MUST have DIFFERENT username and repo name (e.g., github.com/anthropics/claude-code)
+- NEVER use URLs like github.com/toolname/toolname - these are INVALID
+- If you cannot find a verified URL, set source_url to null
 
 FOCUS ON:
 - GitHub trending AI repos (include star count)
