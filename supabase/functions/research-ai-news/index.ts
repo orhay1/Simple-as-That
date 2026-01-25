@@ -78,11 +78,18 @@ OUTPUT FORMAT - Return a JSON array. Each tool must have:
 - summary: Brief 2-sentence description of what it does
 - source_url: The tool's DIRECT page URL - must be one of:
   * Official website (e.g., cursor.sh, notion.com)
-  * GitHub repo (e.g., github.com/user/repo)
+  * GitHub repo (e.g., github.com/anthropics/claude-code)
   * Direct Taaft tool page: theresanaiforthat.com/ai/{tool-slug}/ (NOT category pages)
   NEVER use: /s/..., /just-released/, /trending/, or any listing/category pages
 - tool_name: The exact tool/project name
 - tags: 3-5 tags like ["open-source", "llm", "coding", "free"]
+
+CRITICAL URL RULES:
+- ONLY include URLs you found in your search results (from citations)
+- NEVER fabricate or guess GitHub URLs
+- GitHub URLs MUST have DIFFERENT username and repo name (e.g., github.com/anthropics/claude-code)
+- NEVER use URLs like github.com/toolname/toolname - these are INVALID
+- If you cannot find a verified URL, set source_url to null
 
 FOCUS ON:
 - GitHub trending AI repos (include star count)
@@ -153,6 +160,57 @@ function validateAndFixSourceUrl(url: string, toolName: string): string {
   }
   
   return url;
+}
+
+// Validate GitHub URLs to detect hallucinated/fake URLs
+function validateGitHubUrl(url: string | null, toolName: string): { valid: boolean; url: string | null; reason?: string } {
+  if (!url) {
+    return { valid: true, url };
+  }
+  
+  // Only validate GitHub URLs
+  if (!url.includes('github.com')) {
+    return { valid: true, url };
+  }
+  
+  // Extract username and repo from GitHub URL
+  const match = url.match(/github\.com\/([^\/]+)\/([^\/\?#]+)/);
+  if (!match) {
+    return { valid: false, url: null, reason: 'Invalid GitHub URL format' };
+  }
+  
+  const [, username, repo] = match;
+  
+  // Flag suspicious pattern: username equals repo name exactly
+  if (username.toLowerCase() === repo.toLowerCase()) {
+    console.warn(`Suspicious GitHub URL detected (username=repo): ${url}`);
+    return { valid: false, url: null, reason: 'Username matches repo name - likely hallucinated' };
+  }
+  
+  // Flag if username matches the tool name (clear hallucination pattern)
+  const normalizedTool = toolName.toLowerCase().replace(/[^a-z0-9]/g, '');
+  const normalizedUsername = username.toLowerCase().replace(/[^a-z0-9]/g, '');
+  const normalizedRepo = repo.toLowerCase().replace(/[^a-z0-9]/g, '');
+  
+  if (normalizedUsername === normalizedTool && normalizedRepo === normalizedTool) {
+    console.warn(`Likely hallucinated GitHub URL for ${toolName}: ${url}`);
+    return { valid: false, url: null, reason: 'Both username and repo match tool name - hallucinated' };
+  }
+  
+  return { valid: true, url };
+}
+
+// Verify GitHub repo exists via HTTP HEAD request
+async function verifyGitHubRepoExists(url: string): Promise<boolean> {
+  try {
+    const response = await fetch(url, { 
+      method: 'HEAD',
+      headers: { 'User-Agent': 'Mozilla/5.0' }
+    });
+    return response.status === 200;
+  } catch {
+    return false;
+  }
 }
 
 // Extract official tool URL from Firecrawl scraped content
@@ -363,6 +421,36 @@ serve(async (req) => {
       // Validate and fix source URL (especially for Taaft category pages)
       const toolName = item.tool_name || item.title || '';
       enrichedItem.source_url = validateAndFixSourceUrl(enrichedItem.source_url || item.source_url, toolName);
+
+      // Validate GitHub URLs to detect hallucinated URLs
+      const githubValidation = validateGitHubUrl(enrichedItem.source_url, toolName);
+      if (!githubValidation.valid) {
+        console.log(`Discarding invalid GitHub URL for ${toolName}: ${githubValidation.reason}`);
+        enrichedItem.source_url = null;
+        
+        // Try to find a real URL from Perplexity citations
+        if (citations.length > 0) {
+          const fallbackUrl = citations.find((c: string) => 
+            c.includes('github.com') || 
+            c.toLowerCase().includes(toolName.toLowerCase().replace(/[^a-z0-9]/g, ''))
+          );
+          if (fallbackUrl) {
+            // Validate the fallback URL too
+            const fallbackValidation = validateGitHubUrl(fallbackUrl, toolName);
+            if (fallbackValidation.valid) {
+              console.log(`Using fallback citation URL: ${fallbackUrl}`);
+              enrichedItem.source_url = fallbackUrl;
+            }
+          }
+        }
+      } else if (enrichedItem.source_url?.includes('github.com')) {
+        // Verify the GitHub URL actually exists
+        const exists = await verifyGitHubRepoExists(enrichedItem.source_url);
+        if (!exists) {
+          console.log(`GitHub repo does not exist: ${enrichedItem.source_url}`);
+          enrichedItem.source_url = null;
+        }
+      }
 
       // Only scrape if we have Firecrawl key and a source URL
       if (enrichedItem.source_url && firecrawlKey) {
