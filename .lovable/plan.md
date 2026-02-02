@@ -1,41 +1,51 @@
 
-# Plan: Fix Gemini Image Generation Model Error
+# Plan: Fix Gemini Image Generation to Use Free Tier Model
 
 ## Problem
 
-The `generate-image` edge function is failing with a 404 error because it's using `gemini-2.0-flash-exp`, which is not a valid image generation model:
+The `generate-image` edge function fails with a 404 error because `gemini-2.0-flash-exp-image-generation` is not a valid/available model for the Gemini API free tier.
 
+Error from logs:
 ```
-models/gemini-2.0-flash-exp is not found for API version v1beta, 
-or is not supported for generateContent
+models/gemini-2.0-flash-exp-image-generation is not found for API version v1beta
 ```
 
 ## Root Cause
 
-The function was written with an outdated Gemini model name. The correct models for image generation with user API keys are:
-- `gemini-2.0-flash-exp-image-generation` (for image generation via Google AI Studio API)
-- Or using the newer `imagen-3.0-generate-002` model
-
-However, based on Google's current API, the correct approach for image generation using a user's Gemini API key is to use the `gemini-2.0-flash-exp-image-generation` model with the `generateContent` endpoint.
+The model name used doesn't exist in the current Google AI Studio API. Based on official documentation, the correct free tier models for image generation are:
+- `gemini-2.5-flash-preview-image-generation` (faster, free tier)
+- `gemini-2.0-flash-exp-image-generation` is deprecated/unavailable
 
 ## Solution
 
-Update `supabase/functions/generate-image/index.ts` to use the correct Gemini model and API format:
+Update the `generate-image` edge function to use the correct model name that works with user-provided Gemini API keys on the free tier.
 
-### Changes to `generateWithGemini` function:
+### Changes Required
 
-**Current (broken):**
+**File: `supabase/functions/generate-image/index.ts`**
+
+| Location | Current (broken) | Fixed |
+|----------|------------------|-------|
+| Line 111 (URL) | `gemini-2.0-flash-exp-image-generation` | `gemini-2.5-flash-preview-image-generation` |
+| Line 316 (usedModel) | `gemini-2.0-flash-exp-image-generation` | `gemini-2.5-flash-preview-image-generation` |
+| Line 324 (usedModel) | `gemini-2.0-flash-exp-image-generation` | `gemini-2.5-flash-preview-image-generation` |
+
+**File: `src/components/settings/ImageSettingsTab.tsx`**
+
+Update the model options to reflect the actual API model names used:
+
+| Current | Fixed |
+|---------|-------|
+| `google/gemini-3-pro-image-preview` | Keep (for future support) |
+| `google/gemini-2.5-flash-image` | `google/gemini-2.5-flash-preview-image-generation` |
+
+### Technical Details
+
+The `generateWithGemini` function will be updated:
+
 ```typescript
 const response = await fetch(
-  `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${apiKey}`,
-  // ...
-);
-```
-
-**Fixed:**
-```typescript
-const response = await fetch(
-  `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp-image-generation:generateContent?key=${apiKey}`,
+  `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-image-generation:generateContent?key=${apiKey}`,
   {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -53,36 +63,21 @@ const response = await fetch(
 );
 ```
 
-### Model name updates throughout the function:
-
-| Location | Current | Fixed |
-|----------|---------|-------|
-| Line 111 | `gemini-2.0-flash-exp` | `gemini-2.0-flash-exp-image-generation` |
-| Line 313 | `usedModel = 'gemini-2.0-flash-exp'` | `usedModel = 'gemini-2.0-flash-exp-image-generation'` |
-| Line 321 | `usedModel = 'gemini-2.0-flash-exp'` | `usedModel = 'gemini-2.0-flash-exp-image-generation'` |
-
-### Additional error handling:
-
-Add specific error message for model not found:
-```typescript
-if (response.status === 404) {
-  throw new Error('Gemini image generation model not available. Please ensure your API key has access to image generation.');
-}
-```
-
 ---
 
 ## Files to Modify
 
 | File | Changes |
 |------|---------|
-| `supabase/functions/generate-image/index.ts` | Update model name to `gemini-2.0-flash-exp-image-generation` in 3 locations, add 404 error handling |
+| `supabase/functions/generate-image/index.ts` | Update model name to `gemini-2.5-flash-preview-image-generation` in 3 locations |
+| `src/components/settings/ImageSettingsTab.tsx` | Sync model values with API model names |
 
 ---
 
 ## Expected Result
 
 After this fix:
-- Image generation with Gemini API key will work correctly
+- Image generation will work using user's Gemini API key on the free tier
+- No Lovable Gateway usage for image generation
 - Users will see generated images in their drafts
-- Proper error messages for API access issues
+- The Settings tab will accurately reflect available models
