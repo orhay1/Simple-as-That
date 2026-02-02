@@ -119,7 +119,6 @@ async function generateWithNanoBanana(prompt: string, apiKey: string): Promise<s
         }],
         generationConfig: {
           responseModalities: ["image", "text"],
-          imageSafetySettings: "block_low_and_above",
         },
       }),
     }
@@ -172,7 +171,6 @@ async function generateWithNanoBananaPro(prompt: string, apiKey: string): Promis
         }],
         generationConfig: {
           responseModalities: ["image", "text"],
-          imageSafetySettings: "block_low_and_above",
         },
       }),
     }
