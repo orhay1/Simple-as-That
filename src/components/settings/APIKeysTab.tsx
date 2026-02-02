@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useSettings } from '@/hooks/useSettings';
@@ -70,41 +69,59 @@ function maskKey(key: string): string {
   return `${key.substring(0, 3)}...${key.substring(key.length - 4)}`;
 }
 
+// Parse key value from settings (handles JSON-stringified values)
+function parseKeyValue(value: unknown): string {
+  if (!value) return '';
+  if (typeof value === 'string') {
+    // Try to parse if it's a JSON string
+    try {
+      const parsed = JSON.parse(value);
+      return typeof parsed === 'string' ? parsed : '';
+    } catch {
+      // It's a plain string
+      return value;
+    }
+  }
+  return '';
+}
+
 interface KeyInputProps {
   config: APIKeyConfig;
-  value: string;
-  onChange: (value: string) => void;
+  savedValue: string;
   onSave: (value: string) => void;
   onRemove: () => void;
   isSaving: boolean;
-  isConfigured: boolean;
   t: any;
 }
 
-function KeyInput({ config, value, onChange, onSave, onRemove, isSaving, isConfigured, t }: KeyInputProps) {
+function KeyInput({ config, savedValue, onSave, onRemove, isSaving, t }: KeyInputProps) {
   const [showKey, setShowKey] = useState(false);
-  const [isEditing, setIsEditing] = useState(!isConfigured);
+  const [isEditing, setIsEditing] = useState(false);
   const [localValue, setLocalValue] = useState('');
-
-  useEffect(() => {
-    if (!isConfigured) {
-      setIsEditing(true);
-    }
-  }, [isConfigured]);
+  
+  const isConfigured = !!savedValue;
 
   const handleSave = () => {
     if (localValue.trim()) {
-      onChange(localValue);
-      onSave(localValue);
+      onSave(localValue.trim());
       setIsEditing(false);
       setLocalValue('');
     }
   };
 
   const handleRemove = () => {
-    onChange('');
     onRemove();
+    setIsEditing(false);
+    setLocalValue('');
+  };
+
+  const handleStartEdit = () => {
     setIsEditing(true);
+    setLocalValue('');
+  };
+
+  const handleCancelEdit = () => {
+    setIsEditing(false);
     setLocalValue('');
   };
 
@@ -148,7 +165,7 @@ function KeyInput({ config, value, onChange, onSave, onRemove, isSaving, isConfi
         </div>
 
         {/* Key input or display */}
-        {isEditing ? (
+        {isEditing || !isConfigured ? (
           <div className="space-y-2">
             <div className="relative">
               <Input
@@ -181,7 +198,7 @@ function KeyInput({ config, value, onChange, onSave, onRemove, isSaving, isConfi
               </a>
               <div className="flex gap-2">
                 {isConfigured && (
-                  <Button variant="outline" size="sm" onClick={() => setIsEditing(false)}>
+                  <Button variant="outline" size="sm" onClick={handleCancelEdit}>
                     {t.common.cancel}
                   </Button>
                 )}
@@ -194,14 +211,14 @@ function KeyInput({ config, value, onChange, onSave, onRemove, isSaving, isConfi
         ) : (
           <div className="flex items-center justify-between gap-2 p-2 bg-muted/30 rounded-md">
             <code className="text-sm font-mono text-muted-foreground" dir="ltr">
-              {maskKey(value)}
+              {maskKey(savedValue)}
             </code>
             <div className="flex gap-2">
-              <Button variant="outline" size="sm" onClick={() => setIsEditing(true)}>
+              <Button variant="outline" size="sm" onClick={handleStartEdit}>
                 {t.settingsApiKeys.update}
               </Button>
-              <Button variant="ghost" size="sm" onClick={handleRemove} className="text-destructive hover:text-destructive">
-                <Trash2 className="h-4 w-4" />
+              <Button variant="ghost" size="sm" onClick={handleRemove} className="text-destructive hover:text-destructive" disabled={isSaving}>
+                {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
               </Button>
             </div>
           </div>
@@ -214,31 +231,19 @@ function KeyInput({ config, value, onChange, onSave, onRemove, isSaving, isConfi
 export function APIKeysTab() {
   const { settings, isLoading, upsertSetting } = useSettings();
   const { t } = useLanguage();
-  const [keyValues, setKeyValues] = useState<Record<string, string>>({});
   const [savingKey, setSavingKey] = useState<string | null>(null);
 
-  // Load existing keys from settings
-  useEffect(() => {
-    const loadedKeys: Record<string, string> = {};
-    Object.keys(API_KEY_CONFIGS).forEach((key) => {
-      const setting = settings.find((s) => s.key === key);
-      if (setting) {
-        try {
-          const value = typeof setting.value === 'string' ? JSON.parse(setting.value) : setting.value;
-          loadedKeys[key] = typeof value === 'string' ? value : '';
-        } catch {
-          loadedKeys[key] = '';
-        }
-      }
-    });
-    setKeyValues(loadedKeys);
-  }, [settings]);
+  // Extract key values from settings
+  const getKeyValue = (key: string): string => {
+    const setting = settings.find((s) => s.key === key);
+    if (!setting) return '';
+    return parseKeyValue(setting.value);
+  };
 
   const handleSave = async (key: string, value: string) => {
     setSavingKey(key);
     try {
       await upsertSetting.mutateAsync({ key, value });
-      setKeyValues((prev) => ({ ...prev, [key]: value }));
     } catch (error) {
       // Error is handled by the mutation
     } finally {
@@ -250,7 +255,6 @@ export function APIKeysTab() {
     setSavingKey(key);
     try {
       await upsertSetting.mutateAsync({ key, value: '' });
-      setKeyValues((prev) => ({ ...prev, [key]: '' }));
       toast.success(t.settingsApiKeys.removed);
     } catch (error) {
       // Error is handled by the mutation
@@ -259,7 +263,9 @@ export function APIKeysTab() {
     }
   };
 
-  const hasGeminiOrOpenAI = keyValues.user_api_key_gemini || keyValues.user_api_key_openai;
+  const geminiValue = getKeyValue('user_api_key_gemini');
+  const openaiValue = getKeyValue('user_api_key_openai');
+  const hasGeminiOrOpenAI = !!geminiValue || !!openaiValue;
 
   if (isLoading) {
     return (
@@ -299,12 +305,10 @@ export function APIKeysTab() {
           <KeyInput
             key={config.key}
             config={config}
-            value={keyValues[config.key] || ''}
-            onChange={(value) => setKeyValues((prev) => ({ ...prev, [config.key]: value }))}
+            savedValue={getKeyValue(config.key)}
             onSave={(value) => handleSave(config.key, value)}
             onRemove={() => handleRemove(config.key)}
             isSaving={savingKey === config.key}
-            isConfigured={!!keyValues[config.key]}
             t={t}
           />
         ))}
