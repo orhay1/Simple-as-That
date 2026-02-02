@@ -7,21 +7,15 @@ import { useLanguage } from '@/contexts/LanguageContext';
 
 const IMAGE_MODELS = [
   { 
-    value: 'google/gemini-3-pro-image-preview', 
-    label: 'Gemini 3 Pro Image', 
-    description: 'Higher quality, default choice',
+    value: 'google/imagen-4', 
+    label: 'Google Imagen 4', 
+    description: 'High quality image generation (default)',
     requiresKey: false
   },
   { 
-    value: 'google/gemini-2.5-flash-preview-image-generation', 
-    label: 'Gemini 2.5 Flash Image', 
-    description: 'Faster generation (free tier)',
-    requiresKey: false
-  },
-  { 
-    value: 'openai/gpt-image-1', 
+    value: 'openai/dall-e-3', 
     label: 'OpenAI DALL-E 3', 
-    description: 'Requires API key',
+    description: 'Requires OpenAI API key',
     requiresKey: true
   },
 ];
@@ -34,7 +28,7 @@ export function ImageSettingsTab() {
   const getImageModel = () => {
     if (localModel !== null) return localModel;
     const setting = getSetting('image_generation_model');
-    return typeof setting === 'string' ? setting : 'google/gemini-3-pro-image-preview';
+    return typeof setting === 'string' ? setting : 'google/imagen-4';
   };
 
   const handleModelChange = async (value: string) => {

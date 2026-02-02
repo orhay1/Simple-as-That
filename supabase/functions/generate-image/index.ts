@@ -104,22 +104,23 @@ function validateDraftId(draftId: unknown): ValidationResult {
 
 // ==================== IMAGE GENERATION ====================
 
-async function generateWithGemini(prompt: string, apiKey: string): Promise<string> {
-  console.log('Using Gemini for image generation');
+async function generateWithGeminiImagen(prompt: string, apiKey: string): Promise<string> {
+  console.log('Using Gemini Imagen 4 for image generation');
   
+  // Use Imagen 4 API endpoint with predict method
   const response = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-image-generation:generateContent?key=${apiKey}`,
+    `https://generativelanguage.googleapis.com/v1beta/models/imagen-4.0-generate-001:predict?key=${apiKey}`,
     {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        contents: [
+        instances: [
           { 
-            parts: [{ text: `Generate an image: Professional LinkedIn post image: ${prompt}. Clean, modern, business-appropriate style.` }] 
+            prompt: `Professional LinkedIn post image: ${prompt}. Clean, modern, business-appropriate style.`
           }
         ],
-        generationConfig: {
-          responseModalities: ['image', 'text'],
+        parameters: {
+          sampleCount: 1,
         },
       }),
     }
@@ -127,30 +128,35 @@ async function generateWithGemini(prompt: string, apiKey: string): Promise<strin
 
   if (!response.ok) {
     const error = await response.text();
-    console.error('Gemini API error:', error);
+    console.error('Gemini Imagen API error:', error);
     if (response.status === 404) {
-      throw new Error('Gemini image generation model not available. Please ensure your API key has access to image generation.');
+      throw new Error('Imagen model not available. Please ensure your Gemini API key has access to Imagen image generation.');
     }
-    if (response.status === 400 && error.includes('API_KEY_INVALID')) {
-      throw new Error('Invalid Gemini API key. Please check your API key in Settings → API Keys.');
+    if (response.status === 400) {
+      if (error.includes('API_KEY_INVALID')) {
+        throw new Error('Invalid Gemini API key. Please check your API key in Settings → API Keys.');
+      }
+      throw new Error(`Imagen API error: ${error}`);
     }
     if (response.status === 429) {
       throw new Error('Gemini rate limit exceeded. Please try again later.');
     }
-    throw new Error(`Gemini API error: ${error}`);
+    if (response.status === 403) {
+      throw new Error('Imagen access denied. Your API key may not have access to image generation. Try enabling it in Google AI Studio.');
+    }
+    throw new Error(`Gemini Imagen API error: ${error}`);
   }
 
   const data = await response.json();
   
-  // Extract image from response
-  const parts = data.candidates?.[0]?.content?.parts || [];
-  for (const part of parts) {
-    if (part.inlineData?.mimeType?.startsWith('image/')) {
-      return part.inlineData.data;
-    }
+  // Extract image from Imagen response format
+  const predictions = data.predictions || [];
+  if (predictions.length > 0 && predictions[0].bytesBase64Encoded) {
+    return predictions[0].bytesBase64Encoded;
   }
   
-  throw new Error('No image data received from Gemini');
+  console.error('Unexpected Imagen response structure:', JSON.stringify(data).substring(0, 500));
+  throw new Error('No image data received from Gemini Imagen');
 }
 
 async function generateWithOpenAI(prompt: string, apiKey: string): Promise<string> {
@@ -311,17 +317,17 @@ serve(async (req) => {
         base64Data = await generateWithOpenAI(prompt, userKeys.openai);
         usedModel = 'dall-e-3';
       } else if (userKeys.gemini) {
-        console.log('OpenAI not available, falling back to Gemini');
-        base64Data = await generateWithGemini(prompt, userKeys.gemini);
-        usedModel = 'gemini-2.5-flash-preview-image-generation';
+        console.log('OpenAI not available, falling back to Gemini Imagen');
+        base64Data = await generateWithGeminiImagen(prompt, userKeys.gemini);
+        usedModel = 'imagen-4.0-generate-001';
       } else {
         throw new Error('DALL-E requires an OpenAI API key. Please configure it in Settings → API Keys.');
       }
     } else {
       // Default: Gemini priority
       if (userKeys.gemini) {
-        base64Data = await generateWithGemini(prompt, userKeys.gemini);
-        usedModel = 'gemini-2.5-flash-preview-image-generation';
+        base64Data = await generateWithGeminiImagen(prompt, userKeys.gemini);
+        usedModel = 'imagen-4.0-generate-001';
       } else if (userKeys.openai) {
         console.log('Gemini not available, falling back to OpenAI');
         base64Data = await generateWithOpenAI(prompt, userKeys.openai);
