@@ -3,8 +3,6 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.89.0";
 import { decode as base64Decode } from "https://deno.land/std@0.168.0/encoding/base64.ts";
 
-const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
-const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY');
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
 const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
@@ -15,9 +13,48 @@ const corsHeaders = {
 
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-const DEFAULT_IMAGE_MODEL = 'google/gemini-3-pro-image-preview';
+// ==================== USER API KEYS ====================
 
-// Input validation
+interface UserApiKeys {
+  gemini: string | null;
+  openai: string | null;
+}
+
+async function getUserApiKeys(userId: string): Promise<UserApiKeys> {
+  const { data: settings } = await supabase
+    .from('settings')
+    .select('key, value')
+    .eq('user_id', userId)
+    .in('key', ['user_api_key_gemini', 'user_api_key_openai']);
+
+  const keys: UserApiKeys = { gemini: null, openai: null };
+  
+  settings?.forEach(s => {
+    let value = s.value;
+    if (typeof value === 'string') {
+      try {
+        value = JSON.parse(value);
+      } catch {
+        // Keep as string
+      }
+    }
+    const keyValue = typeof value === 'string' && value.trim() ? value.trim() : null;
+    
+    switch (s.key) {
+      case 'user_api_key_gemini':
+        keys.gemini = keyValue;
+        break;
+      case 'user_api_key_openai':
+        keys.openai = keyValue;
+        break;
+    }
+  });
+
+  return keys;
+}
+
+// ==================== INPUT VALIDATION ====================
+
 interface ValidationResult {
   valid: boolean;
   error?: string;
@@ -33,12 +70,10 @@ function validatePrompt(prompt: unknown): ValidationResult {
     return { valid: false, error: 'Prompt cannot be empty' };
   }
   
-  // Limit prompt length to prevent abuse
   if (prompt.length > 2000) {
     return { valid: false, error: 'Prompt too long (max 2000 chars)' };
   }
   
-  // Remove control characters
   const sanitized = prompt
     .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '')
     .trim();
@@ -59,7 +94,6 @@ function validateDraftId(draftId: unknown): ValidationResult {
     return { valid: false, error: 'Draft ID must be a string' };
   }
   
-  // Validate UUID format
   const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
   if (!uuidRegex.test(draftId)) {
     return { valid: false, error: 'Invalid draft ID format' };
@@ -68,66 +102,61 @@ function validateDraftId(draftId: unknown): ValidationResult {
   return { valid: true, sanitized: draftId };
 }
 
-interface GenerateImageRequest {
-  prompt: string;
-  draft_id?: string;
-}
+// ==================== IMAGE GENERATION ====================
 
-async function generateWithLovableAI(prompt: string, model: string): Promise<string> {
-  console.log('Using Lovable AI with model:', model);
+async function generateWithGemini(prompt: string, apiKey: string): Promise<string> {
+  console.log('Using Gemini for image generation');
   
-  const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${LOVABLE_API_KEY}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      model: model,
-      messages: [
-        { 
-          role: 'user', 
-          content: `Professional LinkedIn post image: ${prompt}. Clean, modern, business-appropriate style.`
-        }
-      ],
-      modalities: ['image', 'text']
-    }),
-  });
+  const response = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${apiKey}`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [
+          { 
+            parts: [{ text: `Generate an image: Professional LinkedIn post image: ${prompt}. Clean, modern, business-appropriate style.` }] 
+          }
+        ],
+        generationConfig: {
+          responseModalities: ['image', 'text'],
+        },
+      }),
+    }
+  );
 
   if (!response.ok) {
-    if (response.status === 429) {
-      throw new Error('RATE_LIMIT: Rate limits exceeded, please try again later.');
-    }
-    if (response.status === 402) {
-      throw new Error('PAYMENT_REQUIRED: Payment required, please add funds to your Lovable AI workspace.');
-    }
     const error = await response.text();
-    throw new Error(`Lovable AI Gateway error: ${error}`);
+    console.error('Gemini API error:', error);
+    if (response.status === 400 && error.includes('API_KEY_INVALID')) {
+      throw new Error('Invalid Gemini API key. Please check your API key in Settings → API Keys.');
+    }
+    if (response.status === 429) {
+      throw new Error('Gemini rate limit exceeded. Please try again later.');
+    }
+    throw new Error(`Gemini API error: ${error}`);
   }
 
   const data = await response.json();
-  const imageDataUrl = data.choices?.[0]?.message?.images?.[0]?.image_url?.url;
   
-  if (!imageDataUrl) {
-    console.error('No image data in response:', JSON.stringify(data));
-    throw new Error('No image data received from Lovable AI');
+  // Extract image from response
+  const parts = data.candidates?.[0]?.content?.parts || [];
+  for (const part of parts) {
+    if (part.inlineData?.mimeType?.startsWith('image/')) {
+      return part.inlineData.data;
+    }
   }
-
-  // Strip the data URL prefix to get raw base64
-  return imageDataUrl.replace(/^data:image\/\w+;base64,/, '');
+  
+  throw new Error('No image data received from Gemini');
 }
 
-async function generateWithOpenAI(prompt: string): Promise<string> {
+async function generateWithOpenAI(prompt: string, apiKey: string): Promise<string> {
   console.log('Using OpenAI DALL-E 3');
-  
-  if (!OPENAI_API_KEY) {
-    throw new Error('OpenAI API key not configured. Please add OPENAI_API_KEY in secrets.');
-  }
 
   const response = await fetch('https://api.openai.com/v1/images/generations', {
     method: 'POST',
     headers: {
-      'Authorization': `Bearer ${OPENAI_API_KEY}`,
+      'Authorization': `Bearer ${apiKey}`,
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
@@ -142,6 +171,15 @@ async function generateWithOpenAI(prompt: string): Promise<string> {
   if (!response.ok) {
     const error = await response.text();
     console.error('OpenAI Image API error:', error);
+    if (response.status === 401) {
+      throw new Error('Invalid OpenAI API key. Please check your API key in Settings → API Keys.');
+    }
+    if (response.status === 429) {
+      throw new Error('OpenAI rate limit exceeded. Please try again later.');
+    }
+    if (response.status === 402 || response.status === 403) {
+      throw new Error('OpenAI API access denied. Please check your API key has sufficient credits for DALL-E.');
+    }
     throw new Error(`OpenAI Image API error: ${error}`);
   }
 
@@ -153,6 +191,14 @@ async function generateWithOpenAI(prompt: string): Promise<string> {
   }
 
   return base64Data;
+}
+
+// ==================== MAIN HANDLER ====================
+
+interface GenerateImageRequest {
+  prompt: string;
+  draft_id?: string;
+  model?: string;
 }
 
 serve(async (req) => {
@@ -182,7 +228,20 @@ serve(async (req) => {
       });
     }
 
-    // User is authenticated, proceed with request
+    // Get user's API keys
+    const userKeys = await getUserApiKeys(user.id);
+    console.log(`User ${user.id} keys: gemini=${!!userKeys.gemini}, openai=${!!userKeys.openai}`);
+
+    // Check if user has at least one image generation key
+    if (!userKeys.gemini && !userKeys.openai) {
+      return new Response(JSON.stringify({ 
+        error: 'Image generation requires a Gemini or OpenAI API key. Please configure your keys in Settings → API Keys.' 
+      }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     const requestBody: GenerateImageRequest = await req.json();
     
     // Validate prompt
@@ -208,7 +267,7 @@ serve(async (req) => {
     
     console.log(`Generating image for user ${user.id}, prompt length: ${prompt.length}`);
 
-    // Fetch image model from user's settings
+    // Fetch user's preferred image model
     const { data: modelSetting } = await supabase
       .from('settings')
       .select('value')
@@ -216,24 +275,57 @@ serve(async (req) => {
       .eq('user_id', user.id)
       .maybeSingle();
 
-    // Parse the model value - it may be stored as a JSON string with quotes
-    let selectedModel = DEFAULT_IMAGE_MODEL;
+    let selectedModel = 'gemini'; // Default to Gemini (priority)
     if (modelSetting?.value) {
       const rawValue = modelSetting.value;
-      // Handle both JSON-encoded strings and plain strings
-      selectedModel = typeof rawValue === 'string' 
+      const modelValue = typeof rawValue === 'string' 
         ? rawValue.replace(/^"|"$/g, '') 
         : String(rawValue);
+      
+      // Map model names to providers
+      if (modelValue.includes('openai') || modelValue.includes('dall')) {
+        selectedModel = 'openai';
+      }
     }
+    
+    // Override with request model if provided
+    if (requestBody.model) {
+      if (requestBody.model.includes('openai') || requestBody.model.includes('dall')) {
+        selectedModel = 'openai';
+      } else {
+        selectedModel = 'gemini';
+      }
+    }
+
     console.log('Using image model:', selectedModel);
 
-    // Generate image based on selected model
+    // Generate image based on selected model and available keys
     let base64Data: string;
+    let usedModel: string;
     
-    if (selectedModel === 'openai/gpt-image-1') {
-      base64Data = await generateWithOpenAI(prompt);
+    if (selectedModel === 'openai') {
+      if (userKeys.openai) {
+        base64Data = await generateWithOpenAI(prompt, userKeys.openai);
+        usedModel = 'dall-e-3';
+      } else if (userKeys.gemini) {
+        console.log('OpenAI not available, falling back to Gemini');
+        base64Data = await generateWithGemini(prompt, userKeys.gemini);
+        usedModel = 'gemini-2.0-flash-exp';
+      } else {
+        throw new Error('DALL-E requires an OpenAI API key. Please configure it in Settings → API Keys.');
+      }
     } else {
-      base64Data = await generateWithLovableAI(prompt, selectedModel);
+      // Default: Gemini priority
+      if (userKeys.gemini) {
+        base64Data = await generateWithGemini(prompt, userKeys.gemini);
+        usedModel = 'gemini-2.0-flash-exp';
+      } else if (userKeys.openai) {
+        console.log('Gemini not available, falling back to OpenAI');
+        base64Data = await generateWithOpenAI(prompt, userKeys.openai);
+        usedModel = 'dall-e-3';
+      } else {
+        throw new Error('Image generation requires a Gemini or OpenAI API key.');
+      }
     }
 
     // Decode base64 to binary
@@ -271,7 +363,7 @@ serve(async (req) => {
         file_url: publicUrl,
         prompt: prompt,
         is_ai_generated: true,
-        metadata: { model: selectedModel, storage_path: fileName },
+        metadata: { model: usedModel, storage_path: fileName },
         user_id: user.id,
       })
       .select()
@@ -297,7 +389,7 @@ serve(async (req) => {
       user_prompt: prompt,
       raw_output: JSON.stringify({ storage_path: fileName }),
       parsed_output: { image_url: publicUrl, asset_id: asset?.id },
-      model: selectedModel,
+      model: usedModel,
       created_entity_type: 'assets',
       created_entity_id: asset?.id,
     });
@@ -310,20 +402,6 @@ serve(async (req) => {
     });
   } catch (error: any) {
     console.error('Error in generate-image function:', error);
-    
-    // Handle specific error types
-    if (error.message?.startsWith('RATE_LIMIT:')) {
-      return new Response(JSON.stringify({ error: error.message.replace('RATE_LIMIT: ', '') }), {
-        status: 429,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-    if (error.message?.startsWith('PAYMENT_REQUIRED:')) {
-      return new Response(JSON.stringify({ error: error.message.replace('PAYMENT_REQUIRED: ', '') }), {
-        status: 402,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
     
     return new Response(JSON.stringify({ error: error.message || 'Unknown error' }), {
       status: 500,
