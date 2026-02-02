@@ -296,6 +296,23 @@ export interface Translations {
     generated: string;
     failed: string;
   };
+  settingsApiKeys: {
+    title: string;
+    description: string;
+    required: string;
+    optional: string;
+    configured: string;
+    notConfigured: string;
+    update: string;
+    removed: string;
+    securityNote: string;
+    noKeysWarning: string;
+    howItWorks: string;
+    howItWorks1: string;
+    howItWorks2: string;
+    howItWorks3: string;
+    howItWorks4: string;
+  };
 }
 
 export const translations: Record<Language, Translations> = {
@@ -595,6 +612,23 @@ export const translations: Record<Language, Translations> = {
       generated: 'Generated',
       failed: 'Generation failed',
     },
+    settingsApiKeys: {
+      title: 'API Keys',
+      description: 'Configure your AI provider API keys. Your keys are stored securely and never shared.',
+      required: 'Required',
+      optional: 'Optional',
+      configured: 'Configured',
+      notConfigured: 'Not configured',
+      update: 'Update',
+      removed: 'API key removed',
+      securityNote: 'Your API keys are stored securely in the database and are only used server-side. They are never exposed to the browser.',
+      noKeysWarning: 'At least one AI key (Gemini or ChatGPT) is required to use AI features. Gemini offers a free tier at Google AI Studio.',
+      howItWorks: 'How it works',
+      howItWorks1: 'Gemini and ChatGPT are equal priority for drafts, hashtags, and rewrites - use whichever you prefer',
+      howItWorks2: 'Perplexity is used for research when available; otherwise Gemini with web grounding is used',
+      howItWorks3: 'Firecrawl enables detailed content scraping - without it, only AI summaries are shown',
+      howItWorks4: 'For images, Gemini is the default; DALL-E is available if you add an OpenAI key',
+    },
   },
   he: {
     common: {
@@ -891,6 +925,23 @@ export const translations: Record<Language, Translations> = {
       regenerate: 'צור מחדש',
       generated: 'נוצר',
       failed: 'היצירה נכשלה',
+    },
+    settingsApiKeys: {
+      title: 'מפתחות API',
+      description: 'הגדר את מפתחות ה-API של ספקי ה-AI שלך. המפתחות שלך מאוחסנים באופן מאובטח ולעולם לא משותפים.',
+      required: 'נדרש',
+      optional: 'אופציונלי',
+      configured: 'מוגדר',
+      notConfigured: 'לא מוגדר',
+      update: 'עדכן',
+      removed: 'מפתח API הוסר',
+      securityNote: 'מפתחות ה-API שלך מאוחסנים באופן מאובטח במסד הנתונים ומשמשים רק בצד השרת. הם לעולם לא נחשפים לדפדפן.',
+      noKeysWarning: 'נדרש לפחות מפתח AI אחד (Gemini או ChatGPT) לשימוש בתכונות AI. ל-Gemini יש שכבה חינמית ב-Google AI Studio.',
+      howItWorks: 'איך זה עובד',
+      howItWorks1: 'Gemini ו-ChatGPT בעדיפות שווה לטיוטות, האשטאגים ושכתובים - השתמש במה שאתה מעדיף',
+      howItWorks2: 'Perplexity משמש למחקר כשזמין; אחרת Gemini עם חיפוש אינטרנט',
+      howItWorks3: 'Firecrawl מאפשר גרידת תוכן מפורטת - בלעדיו, רק סיכומי AI מוצגים',
+      howItWorks4: 'לתמונות, Gemini הוא ברירת המחדל; DALL-E זמין אם תוסיף מפתח OpenAI',
     },
   },
 };

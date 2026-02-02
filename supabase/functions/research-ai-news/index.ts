@@ -6,7 +6,56 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// Input validation utilities
+// ==================== USER API KEYS ====================
+
+interface UserApiKeys {
+  gemini: string | null;
+  openai: string | null;
+  perplexity: string | null;
+  firecrawl: string | null;
+}
+
+async function getUserApiKeys(supabase: any, userId: string): Promise<UserApiKeys> {
+  const { data: settings } = await supabase
+    .from('settings')
+    .select('key, value')
+    .eq('user_id', userId)
+    .in('key', ['user_api_key_gemini', 'user_api_key_openai', 'user_api_key_perplexity', 'user_api_key_firecrawl']);
+
+  const keys: UserApiKeys = { gemini: null, openai: null, perplexity: null, firecrawl: null };
+  
+  settings?.forEach((s: any) => {
+    let value = s.value;
+    if (typeof value === 'string') {
+      try {
+        value = JSON.parse(value);
+      } catch {
+        // Keep as string
+      }
+    }
+    const keyValue = typeof value === 'string' && value.trim() ? value.trim() : null;
+    
+    switch (s.key) {
+      case 'user_api_key_gemini':
+        keys.gemini = keyValue;
+        break;
+      case 'user_api_key_openai':
+        keys.openai = keyValue;
+        break;
+      case 'user_api_key_perplexity':
+        keys.perplexity = keyValue;
+        break;
+      case 'user_api_key_firecrawl':
+        keys.firecrawl = keyValue;
+        break;
+    }
+  });
+
+  return keys;
+}
+
+// ==================== INPUT VALIDATION ====================
+
 interface ValidationResult {
   valid: boolean;
   error?: string;
@@ -22,12 +71,10 @@ function validateQuery(query: unknown): ValidationResult {
     return { valid: false, error: 'Query must be a string' };
   }
   
-  // Limit query length
   if (query.length > 1000) {
     return { valid: false, error: 'Query too long (max 1000 chars)' };
   }
   
-  // Remove control characters
   const sanitized = query
     .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '')
     .trim();
@@ -70,7 +117,8 @@ function validateLanguage(lang: unknown): ValidationResult {
   return { valid: true, sanitized: lang };
 }
 
-// Improved default prompts focused on practical AI tools
+// ==================== DEFAULT PROMPTS ====================
+
 const DEFAULT_PERPLEXITY_SYSTEM_PROMPT = `You are an expert AI tools researcher. Find practical AI tools that developers and professionals can use immediately.
 
 OUTPUT FORMAT - Return a JSON array. Each tool must have:
@@ -134,11 +182,29 @@ Provide the following information in a clear, scannable format:
 
 Return ONLY the structured evaluation. No additional commentary.`;
 
-// Validate and fix Taaft URLs that point to category pages instead of direct tool pages
+// Gemini-specific research prompt (for fallback when no Perplexity)
+const GEMINI_RESEARCH_SYSTEM_PROMPT = `You are an AI tools researcher. Search the web for the latest practical AI tools.
+
+Use your web search capability to find real, current AI tools. For each tool you find, provide:
+- title: Tool name + brief hook
+- summary: 2-sentence description
+- source_url: The official URL (must be real, verified URL you found)
+- tool_name: Exact name
+- tags: 3-5 relevant tags
+
+Focus on:
+- Recently launched AI tools (last 2 weeks)
+- Tools with clear practical value
+- Free or freemium options
+- Well-documented projects
+
+Return a JSON array of tools. Be factual - only include tools you actually found with real URLs.`;
+
+// ==================== URL VALIDATION ====================
+
 function validateAndFixSourceUrl(url: string, toolName: string): string {
   if (!url) return url;
   
-  // Detect Taaft category/listing URLs that need fixing
   const taaftBadPatterns = [
     /theresanaiforthat\.com\/s\//,
     /theresanaiforthat\.com\/just-released/,
@@ -149,7 +215,6 @@ function validateAndFixSourceUrl(url: string, toolName: string): string {
   
   for (const pattern of taaftBadPatterns) {
     if (pattern.test(url)) {
-      // Generate the correct tool URL from the tool name
       const slug = toolName
         .toLowerCase()
         .replace(/[^a-z0-9]+/g, '-')
@@ -162,18 +227,15 @@ function validateAndFixSourceUrl(url: string, toolName: string): string {
   return url;
 }
 
-// Validate GitHub URLs to detect hallucinated/fake URLs
 function validateGitHubUrl(url: string | null, toolName: string): { valid: boolean; url: string | null; reason?: string } {
   if (!url) {
     return { valid: true, url };
   }
   
-  // Only validate GitHub URLs
   if (!url.includes('github.com')) {
     return { valid: true, url };
   }
   
-  // Extract username and repo from GitHub URL
   const match = url.match(/github\.com\/([^\/]+)\/([^\/\?#]+)/);
   if (!match) {
     return { valid: false, url: null, reason: 'Invalid GitHub URL format' };
@@ -181,13 +243,11 @@ function validateGitHubUrl(url: string | null, toolName: string): { valid: boole
   
   const [, username, repo] = match;
   
-  // Flag suspicious pattern: username equals repo name exactly
   if (username.toLowerCase() === repo.toLowerCase()) {
     console.warn(`Suspicious GitHub URL detected (username=repo): ${url}`);
     return { valid: false, url: null, reason: 'Username matches repo name - likely hallucinated' };
   }
   
-  // Flag if username matches the tool name (clear hallucination pattern)
   const normalizedTool = toolName.toLowerCase().replace(/[^a-z0-9]/g, '');
   const normalizedUsername = username.toLowerCase().replace(/[^a-z0-9]/g, '');
   const normalizedRepo = repo.toLowerCase().replace(/[^a-z0-9]/g, '');
@@ -200,7 +260,6 @@ function validateGitHubUrl(url: string | null, toolName: string): { valid: boole
   return { valid: true, url };
 }
 
-// Verify GitHub repo exists via HTTP HEAD request
 async function verifyGitHubRepoExists(url: string): Promise<boolean> {
   try {
     const response = await fetch(url, { 
@@ -213,11 +272,9 @@ async function verifyGitHubRepoExists(url: string): Promise<boolean> {
   }
 }
 
-// Extract official tool URL from Firecrawl scraped content
 function extractOfficialUrl(content: string, sourceUrl: string): string | null {
   if (!content || !sourceUrl.includes('theresanaiforthat.com')) return null;
   
-  // Look for "Visit" links in the markdown content
   const visitPatterns = [
     /\[Visit[^\]]*\]\((https?:\/\/[^)]+)\)/i,
     /\[Go to[^\]]*\]\((https?:\/\/[^)]+)\)/i,
@@ -228,7 +285,6 @@ function extractOfficialUrl(content: string, sourceUrl: string): string | null {
   for (const pattern of visitPatterns) {
     const match = content.match(pattern);
     if (match && match[1]) {
-      // Filter out internal taaft links
       if (!match[1].includes('theresanaiforthat.com')) {
         console.log(`Extracted official URL: ${match[1]}`);
         return match[1];
@@ -238,6 +294,139 @@ function extractOfficialUrl(content: string, sourceUrl: string): string | null {
   
   return null;
 }
+
+// ==================== AI PROVIDER CALLS ====================
+
+async function callPerplexity(systemPrompt: string, userPrompt: string, apiKey: string): Promise<{ content: string; citations: string[] }> {
+  console.log('Calling Perplexity API...');
+  
+  const response = await fetch('https://api.perplexity.ai/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model: 'sonar',
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userPrompt }
+      ],
+      temperature: 0.3,
+      search_recency_filter: 'week',
+    }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error('Perplexity API error:', response.status, errorText);
+    if (response.status === 401) {
+      throw new Error('Invalid Perplexity API key. Please check your API key in Settings → API Keys.');
+    }
+    if (response.status === 429) {
+      throw new Error('Perplexity rate limit exceeded. Please try again later.');
+    }
+    throw new Error(`Perplexity API error: ${response.status}`);
+  }
+
+  const data = await response.json();
+  return {
+    content: data.choices?.[0]?.message?.content || '',
+    citations: data.citations || [],
+  };
+}
+
+async function callGeminiWithGrounding(systemPrompt: string, userPrompt: string, apiKey: string): Promise<{ content: string; citations: string[] }> {
+  console.log('Calling Gemini with web grounding...');
+  
+  const response = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [
+          { parts: [{ text: `${systemPrompt}\n\n${userPrompt}` }] }
+        ],
+        generationConfig: { temperature: 0.3 },
+        tools: [{ google_search: {} }],
+      }),
+    }
+  );
+
+  if (!response.ok) {
+    const error = await response.text();
+    console.error('Gemini API error:', error);
+    if (response.status === 400 && error.includes('API_KEY_INVALID')) {
+      throw new Error('Invalid Gemini API key. Please check your API key in Settings → API Keys.');
+    }
+    if (response.status === 429) {
+      throw new Error('Gemini rate limit exceeded. Please try again later.');
+    }
+    throw new Error(`Gemini API error: ${error}`);
+  }
+
+  const data = await response.json();
+  const content = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+  
+  // Extract grounding metadata for citations
+  const groundingMetadata = data.candidates?.[0]?.groundingMetadata;
+  const citations: string[] = [];
+  if (groundingMetadata?.groundingChunks) {
+    groundingMetadata.groundingChunks.forEach((chunk: any) => {
+      if (chunk.web?.uri) {
+        citations.push(chunk.web.uri);
+      }
+    });
+  }
+  
+  return { content, citations };
+}
+
+async function callGeminiForPolish(prompt: string, apiKey: string): Promise<string> {
+  const response = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: { temperature: 0.5 },
+      }),
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error(`Gemini polish failed: ${response.status}`);
+  }
+
+  const data = await response.json();
+  return data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+}
+
+async function callOpenAIForPolish(prompt: string, apiKey: string): Promise<string> {
+  const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model: 'gpt-4o-mini',
+      messages: [{ role: 'user', content: prompt }],
+      temperature: 0.5,
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`OpenAI polish failed: ${response.status}`);
+  }
+
+  const data = await response.json();
+  return data.choices?.[0]?.message?.content || '';
+}
+
+// ==================== MAIN HANDLER ====================
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -270,10 +459,24 @@ serve(async (req) => {
       );
     }
 
-    // User is authenticated, proceed with request
+    // Get user's API keys
+    const userKeys = await getUserApiKeys(supabase, user.id);
+    console.log(`User ${user.id} keys: perplexity=${!!userKeys.perplexity}, gemini=${!!userKeys.gemini}, firecrawl=${!!userKeys.firecrawl}`);
+
+    // Check if user has research capability (Perplexity or Gemini)
+    if (!userKeys.perplexity && !userKeys.gemini) {
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: 'Research requires a Perplexity or Gemini API key. Please configure your keys in Settings → API Keys.' 
+        }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Parse and validate request
     const requestBody = await req.json();
     
-    // Validate inputs
     const queryValidation = validateQuery(requestBody.query);
     if (!queryValidation.valid) {
       return new Response(
@@ -301,22 +504,10 @@ serve(async (req) => {
     const query = queryValidation.sanitized;
     const count = countValidation.sanitized;
     const language = languageValidation.sanitized;
-    
-    const perplexityKey = Deno.env.get('PERPLEXITY_API_KEY');
-    const firecrawlKey = Deno.env.get('FIRECRAWL_API_KEY');
-
-    if (!perplexityKey) {
-      console.error('PERPLEXITY_API_KEY not configured');
-      return new Response(
-        JSON.stringify({ success: false, error: 'Perplexity connector not configured' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
 
     console.log(`Research initiated by user ${user.id}, count: ${count}, language: ${language}`);
 
     // Fetch custom prompts from user's settings
-    console.log('Fetching custom prompts from settings for user:', user.id);
     const { data: settings } = await supabase
       .from('settings')
       .select('key, value')
@@ -324,7 +515,7 @@ serve(async (req) => {
       .in('key', ['perplexity_system_prompt', 'perplexity_user_prompt', 'research_polish_prompt']);
 
     const settingsMap: Record<string, string> = {};
-    settings?.forEach(s => {
+    settings?.forEach((s: any) => {
       if (typeof s.value === 'string') {
         settingsMap[s.key] = s.value;
       } else if (s.value && typeof s.value === 'object') {
@@ -332,110 +523,80 @@ serve(async (req) => {
       }
     });
 
-    // Build system prompt with count
+    // Build prompts
     const baseSystemPrompt = settingsMap['perplexity_system_prompt'] || DEFAULT_PERPLEXITY_SYSTEM_PROMPT;
     const systemPrompt = baseSystemPrompt.replace(/\d+-\d+ tools|\d+ tools/g, `${count} tools`) + `\n\nReturn exactly ${count} tools.`;
     const userPrompt = query || settingsMap['perplexity_user_prompt'] || DEFAULT_PERPLEXITY_USER_PROMPT;
     const polishPrompt = settingsMap['research_polish_prompt'] || DEFAULT_POLISH_PROMPT;
 
-    console.log('Starting AI tools research with prompts:', {
-      systemPromptLength: systemPrompt.length,
-      userPromptLength: userPrompt.length,
-      usingCustomSystem: !!settingsMap['perplexity_system_prompt'],
-      usingCustomUser: !!query || !!settingsMap['perplexity_user_prompt']
-    });
+    console.log('Starting AI tools research...');
 
-    // Step 1: Search with Perplexity
-    console.log('Calling Perplexity API...');
-    const perplexityResponse = await fetch('https://api.perplexity.ai/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${perplexityKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'sonar',
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: userPrompt }
-        ],
-        temperature: 0.3,
-        search_recency_filter: 'week',
-      }),
-    });
+    // Step 1: Research - Use Perplexity if available, else Gemini with grounding
+    let researchContent = '';
+    let citations: string[] = [];
 
-    if (!perplexityResponse.ok) {
-      const errorText = await perplexityResponse.text();
-      console.error('Perplexity API error:', perplexityResponse.status, errorText);
-      return new Response(
-        JSON.stringify({ success: false, error: `Perplexity API error: ${perplexityResponse.status}` }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+    if (userKeys.perplexity) {
+      const result = await callPerplexity(systemPrompt, userPrompt, userKeys.perplexity);
+      researchContent = result.content;
+      citations = result.citations;
+    } else if (userKeys.gemini) {
+      const result = await callGeminiWithGrounding(GEMINI_RESEARCH_SYSTEM_PROMPT + `\n\nFind exactly ${count} tools.`, userPrompt, userKeys.gemini);
+      researchContent = result.content;
+      citations = result.citations;
     }
 
-    const perplexityData = await perplexityResponse.json();
-    console.log('Perplexity response received');
-    
-    const content = perplexityData.choices?.[0]?.message?.content || '';
-    const citations = perplexityData.citations || [];
-    
-    // Parse the JSON from Perplexity response
+    // Parse the JSON from response
     let newsItems: any[] = [];
     try {
-      // Try to extract JSON array from the response
-      const jsonMatch = content.match(/\[[\s\S]*\]/);
+      const jsonMatch = researchContent.match(/\[[\s\S]*\]/);
       if (jsonMatch) {
         newsItems = JSON.parse(jsonMatch[0]);
       } else {
-        // If no JSON array, try parsing the whole content
-        newsItems = JSON.parse(content);
+        newsItems = JSON.parse(researchContent);
       }
     } catch (parseError) {
-      console.error('Failed to parse Perplexity response as JSON:', parseError);
-      console.log('Raw content:', content);
-      // Create a single item from the text response
+      console.error('Failed to parse research response as JSON:', parseError);
+      console.log('Raw content:', researchContent);
       newsItems = [{
         title: 'AI Tools Summary',
-        summary: content.substring(0, 500),
+        summary: researchContent.substring(0, 500),
         source_url: citations[0] || null,
         tool_name: null,
         tags: ['ai', 'tools']
       }];
     }
 
-    console.log(`Parsed ${newsItems.length} tools from Perplexity`);
+    console.log(`Parsed ${newsItems.length} tools from research`);
 
-    // Step 2: Optionally enrich with Firecrawl for additional context
+    // Step 2: Enrich with Firecrawl (only if user has Firecrawl key)
     const enrichedItems = [];
-    const lovableApiKey = Deno.env.get('LOVABLE_API_KEY');
     
     for (const item of newsItems) {
       let enrichedItem = {
         ...item,
         full_content: null,
-        raw_perplexity_response: perplexityData,
+        official_url: null,
+        raw_perplexity_response: { content: researchContent },
         raw_firecrawl_response: null,
         polished_summary: null,
       };
 
-      // Validate and fix source URL (especially for Taaft category pages)
+      // Validate and fix source URL
       const toolName = item.tool_name || item.title || '';
       enrichedItem.source_url = validateAndFixSourceUrl(enrichedItem.source_url || item.source_url, toolName);
 
-      // Validate GitHub URLs to detect hallucinated URLs
+      // Validate GitHub URLs
       const githubValidation = validateGitHubUrl(enrichedItem.source_url, toolName);
       if (!githubValidation.valid) {
         console.log(`Discarding invalid GitHub URL for ${toolName}: ${githubValidation.reason}`);
         enrichedItem.source_url = null;
         
-        // Try to find a real URL from Perplexity citations
         if (citations.length > 0) {
           const fallbackUrl = citations.find((c: string) => 
             c.includes('github.com') || 
             c.toLowerCase().includes(toolName.toLowerCase().replace(/[^a-z0-9]/g, ''))
           );
           if (fallbackUrl) {
-            // Validate the fallback URL too
             const fallbackValidation = validateGitHubUrl(fallbackUrl, toolName);
             if (fallbackValidation.valid) {
               console.log(`Using fallback citation URL: ${fallbackUrl}`);
@@ -444,7 +605,6 @@ serve(async (req) => {
           }
         }
       } else if (enrichedItem.source_url?.includes('github.com')) {
-        // Verify the GitHub URL actually exists
         const exists = await verifyGitHubRepoExists(enrichedItem.source_url);
         if (!exists) {
           console.log(`GitHub repo does not exist: ${enrichedItem.source_url}`);
@@ -452,14 +612,14 @@ serve(async (req) => {
         }
       }
 
-      // Only scrape if we have Firecrawl key and a source URL
-      if (enrichedItem.source_url && firecrawlKey) {
+      // Only scrape if user has Firecrawl key
+      if (enrichedItem.source_url && userKeys.firecrawl) {
         try {
           console.log(`Fetching additional info from: ${enrichedItem.source_url}`);
           const firecrawlResponse = await fetch('https://api.firecrawl.dev/v1/scrape', {
             method: 'POST',
             headers: {
-              'Authorization': `Bearer ${firecrawlKey}`,
+              'Authorization': `Bearer ${userKeys.firecrawl}`,
               'Content-Type': 'application/json',
             },
             body: JSON.stringify({
@@ -473,11 +633,9 @@ serve(async (req) => {
             const firecrawlData = await firecrawlResponse.json();
             const rawContent = firecrawlData.data?.markdown || firecrawlData.markdown || null;
             
-            // Clean and limit the content
             if (rawContent) {
               enrichedItem.full_content = rawContent.substring(0, 2000);
               
-              // Extract official tool URL from Taaft pages
               const officialUrl = extractOfficialUrl(rawContent, enrichedItem.source_url || '');
               if (officialUrl) {
                 enrichedItem.official_url = officialUrl;
@@ -491,14 +649,16 @@ serve(async (req) => {
         } catch (scrapeError) {
           console.warn(`Error fetching ${item.source_url}:`, scrapeError);
         }
+      } else if (!userKeys.firecrawl) {
+        console.log(`Skipping scrape for ${item.title} - no Firecrawl key configured`);
       }
 
-      // Step 3: Polish the summary with AI to make it human-readable
-      if (lovableApiKey) {
+      // Step 3: Polish the summary with AI
+      const polishKey = userKeys.gemini || userKeys.openai;
+      if (polishKey) {
         try {
           console.log(`Polishing summary for: ${item.title}`);
           
-          // Language instruction for non-English content
           const languageNames: Record<string, string> = {
             'en': '',
             'he': 'Write this evaluation entirely in Hebrew.',
@@ -506,14 +666,9 @@ serve(async (req) => {
             'fr': 'Write this evaluation entirely in French.',
             'de': 'Write this evaluation entirely in German.',
             'ar': 'Write this evaluation entirely in Arabic.',
-            'pt': 'Write this evaluation entirely in Portuguese.',
-            'ru': 'Write this evaluation entirely in Russian.',
-            'zh': 'Write this evaluation entirely in Chinese.',
-            'ja': 'Write this evaluation entirely in Japanese.',
           };
           const languageInstruction = languageNames[language] || '';
           
-          // Use the customizable polish prompt with increased context (1000 chars)
           const contextLine = enrichedItem.full_content ? `CONTEXT: ${enrichedItem.full_content.substring(0, 1000)}` : '';
           const filledPolishPrompt = polishPrompt
             .replace('{tool_name}', item.tool_name || item.title)
@@ -521,30 +676,16 @@ serve(async (req) => {
             .replace('{context}', contextLine)
             .replace('{language_instruction}', languageInstruction);
 
-          const aiPolishResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${lovableApiKey}`,
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              model: 'google/gemini-2.5-flash-lite',
-              messages: [
-                { role: 'user', content: filledPolishPrompt }
-              ],
-            }),
-          });
-
-          if (aiPolishResponse.ok) {
-            const polishData = await aiPolishResponse.json();
-            const polishedText = polishData.choices?.[0]?.message?.content;
-            if (polishedText) {
-              enrichedItem.polished_summary = polishedText.trim();
-              console.log(`Successfully polished summary for: ${item.title}`);
-            }
-          } else {
-            const errorText = await aiPolishResponse.text();
-            console.warn(`AI polish failed for ${item.title}: ${aiPolishResponse.status}`, errorText);
+          let polishedText = '';
+          if (userKeys.gemini) {
+            polishedText = await callGeminiForPolish(filledPolishPrompt, userKeys.gemini);
+          } else if (userKeys.openai) {
+            polishedText = await callOpenAIForPolish(filledPolishPrompt, userKeys.openai);
+          }
+          
+          if (polishedText) {
+            enrichedItem.polished_summary = polishedText.trim();
+            console.log(`Successfully polished summary for: ${item.title}`);
           }
         } catch (polishError) {
           console.warn(`Error polishing ${item.title}:`, polishError);
@@ -558,7 +699,6 @@ serve(async (req) => {
     console.log('Storing tools in database...');
     const insertData = enrichedItems.map(item => ({
       title: item.title || 'Untitled Tool',
-      // Use polished summary if available, otherwise fall back to original
       summary: item.polished_summary || (typeof item.summary === 'object' ? JSON.stringify(item.summary) : item.summary) || null,
       full_content: item.full_content || null,
       source_url: item.source_url || null,
@@ -592,7 +732,7 @@ serve(async (req) => {
         success: true, 
         items: savedItems,
         citations,
-        message: `Discovered ${savedItems?.length || 0} AI tools`
+        message: `Discovered ${savedItems?.length || 0} AI tools${!userKeys.firecrawl ? ' (no scraping - add Firecrawl key for detailed content)' : ''}`
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
