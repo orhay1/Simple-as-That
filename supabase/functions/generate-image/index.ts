@@ -108,7 +108,7 @@ async function generateWithGemini(prompt: string, apiKey: string): Promise<strin
   console.log('Using Gemini for image generation');
   
   const response = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp-image-generation:generateContent?key=${apiKey}`,
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-image-generation:generateContent?key=${apiKey}`,
     {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -313,7 +313,7 @@ serve(async (req) => {
       } else if (userKeys.gemini) {
         console.log('OpenAI not available, falling back to Gemini');
         base64Data = await generateWithGemini(prompt, userKeys.gemini);
-        usedModel = 'gemini-2.0-flash-exp-image-generation';
+        usedModel = 'gemini-2.5-flash-preview-image-generation';
       } else {
         throw new Error('DALL-E requires an OpenAI API key. Please configure it in Settings → API Keys.');
       }
@@ -321,7 +321,7 @@ serve(async (req) => {
       // Default: Gemini priority
       if (userKeys.gemini) {
         base64Data = await generateWithGemini(prompt, userKeys.gemini);
-        usedModel = 'gemini-2.0-flash-exp-image-generation';
+        usedModel = 'gemini-2.5-flash-preview-image-generation';
       } else if (userKeys.openai) {
         console.log('Gemini not available, falling back to OpenAI');
         base64Data = await generateWithOpenAI(prompt, userKeys.openai);
