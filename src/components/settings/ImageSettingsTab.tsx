@@ -13,9 +13,9 @@ const IMAGE_MODELS = [
     requiresKey: false
   },
   { 
-    value: 'google/gemini-2.5-flash-image', 
+    value: 'google/gemini-2.5-flash-preview-image-generation', 
     label: 'Gemini 2.5 Flash Image', 
-    description: 'Faster generation',
+    description: 'Faster generation (free tier)',
     requiresKey: false
   },
   { 
