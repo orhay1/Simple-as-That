@@ -74,7 +74,7 @@ interface KeyInputProps {
   config: APIKeyConfig;
   value: string;
   onChange: (value: string) => void;
-  onSave: () => void;
+  onSave: (value: string) => void;
   onRemove: () => void;
   isSaving: boolean;
   isConfigured: boolean;
@@ -95,7 +95,7 @@ function KeyInput({ config, value, onChange, onSave, onRemove, isSaving, isConfi
   const handleSave = () => {
     if (localValue.trim()) {
       onChange(localValue);
-      onSave();
+      onSave(localValue);
       setIsEditing(false);
       setLocalValue('');
     }
@@ -301,7 +301,7 @@ export function APIKeysTab() {
             config={config}
             value={keyValues[config.key] || ''}
             onChange={(value) => setKeyValues((prev) => ({ ...prev, [config.key]: value }))}
-            onSave={() => handleSave(config.key, keyValues[config.key] || '')}
+            onSave={(value) => handleSave(config.key, value)}
             onRemove={() => handleRemove(config.key)}
             isSaving={savingKey === config.key}
             isConfigured={!!keyValues[config.key]}
