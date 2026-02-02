@@ -104,23 +104,22 @@ function validateDraftId(draftId: unknown): ValidationResult {
 
 // ==================== IMAGE GENERATION ====================
 
-async function generateWithGeminiImagen(prompt: string, apiKey: string): Promise<string> {
-  console.log('Using Gemini Imagen 4 for image generation');
+// Nano Banana (Free Tier) - uses gemini-2.5-flash-image
+async function generateWithNanoBanana(prompt: string, apiKey: string): Promise<string> {
+  console.log('Using Nano Banana (Free Tier) - gemini-2.5-flash-image');
   
-  // Use Imagen 4 API endpoint with predict method
   const response = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/imagen-4.0-generate-001:predict?key=${apiKey}`,
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`,
     {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        instances: [
-          { 
-            prompt: `Professional LinkedIn post image: ${prompt}. Clean, modern, business-appropriate style.`
-          }
-        ],
-        parameters: {
-          sampleCount: 1,
+        contents: [{ 
+          parts: [{ text: `Professional LinkedIn post image: ${prompt}. Clean, modern, business-appropriate style.` }] 
+        }],
+        generationConfig: {
+          responseModalities: ["image", "text"],
+          imageSafetySettings: "block_low_and_above",
         },
       }),
     }
@@ -128,35 +127,90 @@ async function generateWithGeminiImagen(prompt: string, apiKey: string): Promise
 
   if (!response.ok) {
     const error = await response.text();
-    console.error('Gemini Imagen API error:', error);
-    if (response.status === 404) {
-      throw new Error('Imagen model not available. Please ensure your Gemini API key has access to Imagen image generation.');
+    console.error('Nano Banana API error:', error);
+    if (response.status === 429) {
+      throw new Error('Rate limit exceeded. Free tier allows 500 images/day. Please try again later.');
+    }
+    if (response.status === 403) {
+      throw new Error('Access denied. Please check your Gemini API key has image generation enabled.');
     }
     if (response.status === 400) {
       if (error.includes('API_KEY_INVALID')) {
         throw new Error('Invalid Gemini API key. Please check your API key in Settings → API Keys.');
       }
-      throw new Error(`Imagen API error: ${error}`);
+      throw new Error(`Nano Banana API error: ${error}`);
     }
-    if (response.status === 429) {
-      throw new Error('Gemini rate limit exceeded. Please try again later.');
-    }
-    if (response.status === 403) {
-      throw new Error('Imagen access denied. Your API key may not have access to image generation. Try enabling it in Google AI Studio.');
-    }
-    throw new Error(`Gemini Imagen API error: ${error}`);
+    throw new Error(`Nano Banana API error: ${error}`);
   }
 
   const data = await response.json();
   
-  // Extract image from Imagen response format
-  const predictions = data.predictions || [];
-  if (predictions.length > 0 && predictions[0].bytesBase64Encoded) {
-    return predictions[0].bytesBase64Encoded;
+  // Extract image from generateContent response
+  const base64Data = data.candidates?.[0]?.content?.parts
+    ?.find((p: any) => p.inlineData)?.inlineData?.data;
+  
+  if (!base64Data) {
+    console.error('Unexpected response structure:', JSON.stringify(data).substring(0, 500));
+    throw new Error('No image data received from Nano Banana');
   }
   
-  console.error('Unexpected Imagen response structure:', JSON.stringify(data).substring(0, 500));
-  throw new Error('No image data received from Gemini Imagen');
+  return base64Data;
+}
+
+// Nano Banana Pro (Paid Tier) - uses gemini-3-pro-image-preview
+async function generateWithNanoBananaPro(prompt: string, apiKey: string): Promise<string> {
+  console.log('Using Nano Banana Pro (Paid Tier) - gemini-3-pro-image-preview');
+  
+  const response = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-image-preview:generateContent?key=${apiKey}`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ 
+          parts: [{ text: `Professional LinkedIn post image: ${prompt}. Clean, modern, business-appropriate style.` }] 
+        }],
+        generationConfig: {
+          responseModalities: ["image", "text"],
+          imageSafetySettings: "block_low_and_above",
+        },
+      }),
+    }
+  );
+
+  if (!response.ok) {
+    const error = await response.text();
+    console.error('Nano Banana Pro API error:', error);
+    if (response.status === 403) {
+      throw new Error('This model requires a paid Gemini API key. Try switching to Nano Banana (free tier) in Settings → Images.');
+    }
+    if (response.status === 429) {
+      throw new Error('Rate limit exceeded. Please try again later.');
+    }
+    if (response.status === 404) {
+      throw new Error('Model not available. Please check your API key has image generation enabled.');
+    }
+    if (response.status === 400) {
+      if (error.includes('API_KEY_INVALID')) {
+        throw new Error('Invalid Gemini API key. Please check your API key in Settings → API Keys.');
+      }
+      throw new Error(`Nano Banana Pro API error: ${error}`);
+    }
+    throw new Error(`Nano Banana Pro API error: ${error}`);
+  }
+
+  const data = await response.json();
+  
+  // Extract image from generateContent response
+  const base64Data = data.candidates?.[0]?.content?.parts
+    ?.find((p: any) => p.inlineData)?.inlineData?.data;
+  
+  if (!base64Data) {
+    console.error('Unexpected response structure:', JSON.stringify(data).substring(0, 500));
+    throw new Error('No image data received from Nano Banana Pro');
+  }
+  
+  return base64Data;
 }
 
 async function generateWithOpenAI(prompt: string, apiKey: string): Promise<string> {
@@ -284,16 +338,20 @@ serve(async (req) => {
       .eq('user_id', user.id)
       .maybeSingle();
 
-    let selectedModel = 'gemini'; // Default to Gemini (priority)
+    let selectedModel = 'nano-banana-free'; // Default to free tier
     if (modelSetting?.value) {
       const rawValue = modelSetting.value;
       const modelValue = typeof rawValue === 'string' 
         ? rawValue.replace(/^"|"$/g, '') 
         : String(rawValue);
       
-      // Map model names to providers
+      // Map model names
       if (modelValue.includes('openai') || modelValue.includes('dall')) {
         selectedModel = 'openai';
+      } else if (modelValue.includes('nano-banana-pro') || modelValue.includes('pro')) {
+        selectedModel = 'nano-banana-pro';
+      } else {
+        selectedModel = 'nano-banana-free';
       }
     }
     
@@ -301,8 +359,10 @@ serve(async (req) => {
     if (requestBody.model) {
       if (requestBody.model.includes('openai') || requestBody.model.includes('dall')) {
         selectedModel = 'openai';
+      } else if (requestBody.model.includes('nano-banana-pro') || requestBody.model.includes('pro')) {
+        selectedModel = 'nano-banana-pro';
       } else {
-        selectedModel = 'gemini';
+        selectedModel = 'nano-banana-free';
       }
     }
 
@@ -317,17 +377,28 @@ serve(async (req) => {
         base64Data = await generateWithOpenAI(prompt, userKeys.openai);
         usedModel = 'dall-e-3';
       } else if (userKeys.gemini) {
-        console.log('OpenAI not available, falling back to Gemini Imagen');
-        base64Data = await generateWithGeminiImagen(prompt, userKeys.gemini);
-        usedModel = 'imagen-4.0-generate-001';
+        console.log('OpenAI not available, falling back to Nano Banana');
+        base64Data = await generateWithNanoBanana(prompt, userKeys.gemini);
+        usedModel = 'nano-banana-free';
       } else {
         throw new Error('DALL-E requires an OpenAI API key. Please configure it in Settings → API Keys.');
       }
-    } else {
-      // Default: Gemini priority
+    } else if (selectedModel === 'nano-banana-pro') {
       if (userKeys.gemini) {
-        base64Data = await generateWithGeminiImagen(prompt, userKeys.gemini);
-        usedModel = 'imagen-4.0-generate-001';
+        base64Data = await generateWithNanoBananaPro(prompt, userKeys.gemini);
+        usedModel = 'nano-banana-pro';
+      } else if (userKeys.openai) {
+        console.log('Gemini not available, falling back to OpenAI');
+        base64Data = await generateWithOpenAI(prompt, userKeys.openai);
+        usedModel = 'dall-e-3';
+      } else {
+        throw new Error('Nano Banana Pro requires a Gemini API key.');
+      }
+    } else {
+      // Default: Nano Banana (Free)
+      if (userKeys.gemini) {
+        base64Data = await generateWithNanoBanana(prompt, userKeys.gemini);
+        usedModel = 'nano-banana-free';
       } else if (userKeys.openai) {
         console.log('Gemini not available, falling back to OpenAI');
         base64Data = await generateWithOpenAI(prompt, userKeys.openai);
