@@ -1,67 +1,139 @@
 
-# Plan: Fix Gemini Image Generation to Use Free Tier Model
 
-## Problem
+# Plan: Add Nano Banana Models (Free & Paid) for Image Generation
 
-The `generate-image` edge function fails with a 404 error because `gemini-2.0-flash-exp-image-generation` is not a valid/available model for the Gemini API free tier.
+## Summary
 
-Error from logs:
-```
-models/gemini-2.0-flash-exp-image-generation is not found for API version v1beta
-```
+Replace the current Imagen model with the **Nano Banana** model family from Google:
+- **Nano Banana (Free)**: `gemini-2.5-flash-image` — 500 free images/day
+- **Nano Banana Pro (Paid)**: `gemini-3-pro-image-preview` — Requires paid Gemini API
+- **DALL-E 3 (Paid)**: OpenAI model — Requires OpenAI API key
 
-## Root Cause
+Users will see clear **Free** and **Paid** badges when selecting models.
 
-The model name used doesn't exist in the current Google AI Studio API. Based on official documentation, the correct free tier models for image generation are:
-- `gemini-2.5-flash-preview-image-generation` (faster, free tier)
-- `gemini-2.0-flash-exp-image-generation` is deprecated/unavailable
+---
 
-## Solution
+## Changes Required
 
-Update the `generate-image` edge function to use the correct model name that works with user-provided Gemini API keys on the free tier.
+### File 1: `supabase/functions/generate-image/index.ts`
 
-### Changes Required
+Replace the Imagen-based generation with two new Gemini functions using the `generateContent` API:
 
-**File: `supabase/functions/generate-image/index.ts`**
+| Function | Model | Use Case |
+|----------|-------|----------|
+| `generateWithNanoBanana()` | `gemini-2.5-flash-image` | Free tier (500/day) |
+| `generateWithNanoBananaPro()` | `gemini-3-pro-image-preview` | Paid tier (higher quality) |
 
-| Location | Current (broken) | Fixed |
-|----------|------------------|-------|
-| Line 111 (URL) | `gemini-2.0-flash-exp-image-generation` | `gemini-2.5-flash-preview-image-generation` |
-| Line 316 (usedModel) | `gemini-2.0-flash-exp-image-generation` | `gemini-2.5-flash-preview-image-generation` |
-| Line 324 (usedModel) | `gemini-2.0-flash-exp-image-generation` | `gemini-2.5-flash-preview-image-generation` |
-
-**File: `src/components/settings/ImageSettingsTab.tsx`**
-
-Update the model options to reflect the actual API model names used:
-
-| Current | Fixed |
-|---------|-------|
-| `google/gemini-3-pro-image-preview` | Keep (for future support) |
-| `google/gemini-2.5-flash-image` | `google/gemini-2.5-flash-preview-image-generation` |
-
-### Technical Details
-
-The `generateWithGemini` function will be updated:
-
+**API Pattern** (same for both models):
 ```typescript
 const response = await fetch(
-  `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-image-generation:generateContent?key=${apiKey}`,
+  `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`,
   {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      contents: [
-        { 
-          parts: [{ text: `Generate an image: Professional LinkedIn post image: ${prompt}. Clean, modern, business-appropriate style.` }] 
-        }
-      ],
+      contents: [{ 
+        parts: [{ text: `Professional LinkedIn post image: ${prompt}` }] 
+      }],
       generationConfig: {
-        responseModalities: ['image', 'text'],
-      },
+        imageConfig: { aspectRatio: "1:1" }
+      }
     }),
   }
 );
 ```
+
+**Model routing logic**:
+- `nano-banana-free` → `generateWithNanoBanana()` using `gemini-2.5-flash-image`
+- `nano-banana-pro` → `generateWithNanoBananaPro()` using `gemini-3-pro-image-preview`
+- `openai/dall-e-3` → `generateWithOpenAI()` (existing)
+
+---
+
+### File 2: `src/components/settings/ImageSettingsTab.tsx`
+
+Update model options with free/paid tiers and visual badges:
+
+```typescript
+const IMAGE_MODELS = [
+  { 
+    value: 'nano-banana-free', 
+    label: 'Nano Banana', 
+    description: '500 free images/day • Fast generation',
+    tier: 'free',
+  },
+  { 
+    value: 'nano-banana-pro', 
+    label: 'Nano Banana Pro', 
+    description: 'Highest quality • Requires paid Gemini API',
+    tier: 'paid',
+  },
+  { 
+    value: 'openai/dall-e-3', 
+    label: 'DALL-E 3', 
+    description: 'Requires OpenAI API key with credits',
+    tier: 'paid',
+  },
+];
+```
+
+Add visual badges:
+- **Free** badge (green) for `nano-banana-free`
+- **Paid** badge (amber) for `nano-banana-pro` and `dall-e-3`
+
+---
+
+### File 3: `src/lib/i18n/translations.ts`
+
+Update translation strings for both English and Hebrew:
+
+**English updates**:
+```typescript
+settingsImages: {
+  // ...existing
+  geminiNote: 'Nano Banana offers 500 free images per day',
+  dalleNote: 'Requires OpenAI API key with credits',
+  flashNote: 'Nano Banana Pro requires a paid Gemini API for highest quality',
+  paidNote: 'Paid tier models require billing-enabled API keys',
+}
+```
+
+**Hebrew updates** (matching translations)
+
+---
+
+## Technical Details
+
+### Response Parsing
+
+The Gemini `generateContent` API returns image data in this format:
+```json
+{
+  "candidates": [{
+    "content": {
+      "parts": [{
+        "inlineData": {
+          "mimeType": "image/png",
+          "data": "base64-encoded-image-data"
+        }
+      }]
+    }
+  }]
+}
+```
+
+Extract with:
+```typescript
+const base64Data = data.candidates?.[0]?.content?.parts
+  ?.find(p => p.inlineData)?.inlineData?.data;
+```
+
+### Error Handling
+
+Add specific error messages:
+- 403: "This model requires a paid Gemini API key. Try switching to Nano Banana (free tier)."
+- 429: "Rate limit exceeded. Free tier allows 500 images/day."
+- 404: "Model not available. Please check your API key has image generation enabled."
 
 ---
 
@@ -69,15 +141,18 @@ const response = await fetch(
 
 | File | Changes |
 |------|---------|
-| `supabase/functions/generate-image/index.ts` | Update model name to `gemini-2.5-flash-preview-image-generation` in 3 locations |
-| `src/components/settings/ImageSettingsTab.tsx` | Sync model values with API model names |
+| `supabase/functions/generate-image/index.ts` | Replace Imagen with Nano Banana models, add `generateWithNanoBanana()` and `generateWithNanoBananaPro()` functions, update routing logic |
+| `src/components/settings/ImageSettingsTab.tsx` | Update model options with free/paid tiers and visual badges |
+| `src/lib/i18n/translations.ts` | Update model notes in EN and HE, add `paidNote` translation |
 
 ---
 
 ## Expected Result
 
 After this fix:
-- Image generation will work using user's Gemini API key on the free tier
-- No Lovable Gateway usage for image generation
-- Users will see generated images in their drafts
-- The Settings tab will accurately reflect available models
+- Free tier Gemini API keys work with **Nano Banana** (500 free images/day)
+- Paid Gemini API keys can use **Nano Banana Pro** for higher quality
+- Users see clear **Free** / **Paid** badges when selecting models
+- Model defaults to **Nano Banana (Free)** for new users
+- No Lovable Gateway usage — all generation uses user's own API keys
+
