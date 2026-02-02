@@ -1,95 +1,88 @@
 
+# Plan: Fix Gemini Image Generation Model Error
 
-# Plan: Fix API Key Save Race Condition (400 Bad Request Error)
+## Problem
 
-## Problem Diagnosis
+The `generate-image` edge function is failing with a 404 error because it's using `gemini-2.0-flash-exp`, which is not a valid image generation model:
 
-The 400 Bad Request error occurs because **API keys are not being saved correctly** due to a React stale closure / race condition.
-
-### Root Cause
-
-In `src/components/settings/APIKeysTab.tsx`:
-
-1. **Line 95-101** (`KeyInput.handleSave`): Calls `onChange(localValue)` to update parent state, then immediately calls `onSave()`
-2. **Line 304**: The `onSave` callback is defined as `() => handleSave(config.key, keyValues[config.key] || '')`
-3. **The bug**: `onChange` triggers a state update which is asynchronous, but `onSave()` executes immediately with the OLD `keyValues` (empty string)
-
-Result: The database stores `""` (empty strings) instead of actual API keys.
-
-Database evidence:
 ```
-user_api_key_gemini: "\"\""  // Empty string wrapped in JSON
-user_api_key_openai: "\"\""
-user_api_key_perplexity: "\"\""
-user_api_key_firecrawl: "\"\""
+models/gemini-2.0-flash-exp is not found for API version v1beta, 
+or is not supported for generateContent
 ```
 
-Edge function logs confirm:
-```
-User keys: perplexity=false, gemini=false, firecrawl=false
-```
+## Root Cause
 
----
+The function was written with an outdated Gemini model name. The correct models for image generation with user API keys are:
+- `gemini-2.0-flash-exp-image-generation` (for image generation via Google AI Studio API)
+- Or using the newer `imagen-3.0-generate-002` model
+
+However, based on Google's current API, the correct approach for image generation using a user's Gemini API key is to use the `gemini-2.0-flash-exp-image-generation` model with the `generateContent` endpoint.
 
 ## Solution
 
-Modify the save flow to pass the **actual key value directly** from the child component to the parent's save handler, bypassing the stale state issue.
+Update `supabase/functions/generate-image/index.ts` to use the correct Gemini model and API format:
 
-### Changes to `src/components/settings/APIKeysTab.tsx`
+### Changes to `generateWithGemini` function:
 
-**1. Update `KeyInput` interface and props** (around line 72-83)
-
-Change `onSave` to accept the value directly:
+**Current (broken):**
 ```typescript
-interface KeyInputProps {
-  // ... existing props
-  onSave: (value: string) => void;  // Now accepts value parameter
+const response = await fetch(
+  `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${apiKey}`,
   // ...
+);
+```
+
+**Fixed:**
+```typescript
+const response = await fetch(
+  `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp-image-generation:generateContent?key=${apiKey}`,
+  {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      contents: [
+        { 
+          parts: [{ text: `Generate an image: Professional LinkedIn post image: ${prompt}. Clean, modern, business-appropriate style.` }] 
+        }
+      ],
+      generationConfig: {
+        responseModalities: ['image', 'text'],
+      },
+    }),
+  }
+);
+```
+
+### Model name updates throughout the function:
+
+| Location | Current | Fixed |
+|----------|---------|-------|
+| Line 111 | `gemini-2.0-flash-exp` | `gemini-2.0-flash-exp-image-generation` |
+| Line 313 | `usedModel = 'gemini-2.0-flash-exp'` | `usedModel = 'gemini-2.0-flash-exp-image-generation'` |
+| Line 321 | `usedModel = 'gemini-2.0-flash-exp'` | `usedModel = 'gemini-2.0-flash-exp-image-generation'` |
+
+### Additional error handling:
+
+Add specific error message for model not found:
+```typescript
+if (response.status === 404) {
+  throw new Error('Gemini image generation model not available. Please ensure your API key has access to image generation.');
 }
 ```
 
-**2. Update `handleSave` in `KeyInput`** (line 95-101)
-
-Pass the `localValue` directly to `onSave`:
-```typescript
-const handleSave = () => {
-  if (localValue.trim()) {
-    onChange(localValue);
-    onSave(localValue);  // Pass value directly
-    setIsEditing(false);
-    setLocalValue('');
-  }
-};
-```
-
-**3. Update the callback in parent component** (line 304)
-
-Receive the value from the child:
-```typescript
-onSave={(value) => handleSave(config.key, value)}
-```
-
-**4. Update the parent `handleSave` function** (around line 236-247)
-
-Already accepts `value` as parameter, so no change needed there.
-
 ---
 
-## Summary of Changes
+## Files to Modify
 
-| File | Lines | Change |
-|------|-------|--------|
-| `src/components/settings/APIKeysTab.tsx` | ~77 | Update `onSave` type in interface to `(value: string) => void` |
-| `src/components/settings/APIKeysTab.tsx` | ~98 | Call `onSave(localValue)` instead of `onSave()` |
-| `src/components/settings/APIKeysTab.tsx` | ~304 | Change callback to `(value) => handleSave(config.key, value)` |
+| File | Changes |
+|------|---------|
+| `supabase/functions/generate-image/index.ts` | Update model name to `gemini-2.0-flash-exp-image-generation` in 3 locations, add 404 error handling |
 
 ---
 
 ## Expected Result
 
 After this fix:
-- API keys will be saved correctly to the database
-- The edge function will retrieve the keys successfully
-- Research feature will work using user's Perplexity/Gemini keys
-- Error message "Research requires a Perplexity or Gemini API key" will only appear when keys genuinely aren't configured
-
+- Image generation with Gemini API key will work correctly
+- Users will see generated images in their drafts
+- Proper error messages for API access issues
