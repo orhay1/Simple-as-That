@@ -17,19 +17,19 @@ const IMAGE_MODELS: ImageModel[] = [
   { 
     value: 'nano-banana-free', 
     label: 'Nano Banana', 
-    description: '500 free images/day • Fast generation',
+    description: 'Billing-enabled key required • 500 free/day • No charges',
     tier: 'free',
   },
   { 
     value: 'nano-banana-pro', 
     label: 'Nano Banana Pro', 
-    description: 'Highest quality • Requires paid Gemini API',
+    description: 'Billing-enabled key required • Highest quality • Paid usage',
     tier: 'paid',
   },
   { 
     value: 'openai/dall-e-3', 
     label: 'DALL-E 3', 
-    description: 'Requires OpenAI API key with credits',
+    description: 'OpenAI API key required • Paid usage',
     tier: 'paid',
   },
 ];
@@ -82,7 +82,7 @@ export function ImageSettingsTab() {
                               : 'bg-amber-500/20 text-amber-600 dark:text-amber-400 border-amber-500/30'
                             }
                           >
-                            {selectedModel.tier === 'free' ? 'Free' : 'Paid'}
+                            {selectedModel.tier === 'free' ? 'Free*' : 'Paid'}
                           </Badge>
                         </div>
                       )}
@@ -102,7 +102,7 @@ export function ImageSettingsTab() {
                                   : 'bg-amber-500/20 text-amber-600 dark:text-amber-400 border-amber-500/30 text-xs'
                                 }
                               >
-                                {model.tier === 'free' ? 'Free' : 'Paid'}
+                                {model.tier === 'free' ? 'Free*' : 'Paid'}
                               </Badge>
                             </div>
                             <span className="text-xs text-muted-foreground">{model.description}</span>

@@ -128,10 +128,14 @@ async function generateWithNanoBanana(prompt: string, apiKey: string): Promise<s
     const error = await response.text();
     console.error('Nano Banana API error:', error);
     if (response.status === 429) {
+      // Check if it's a zero-quota issue (billing not enabled)
+      if (error.includes('limit: 0') || error.includes('quota')) {
+        throw new Error('BILLING_REQUIRED: Image generation requires a billing-enabled Gemini API key. Add a payment method at ai.google.dev (you won\'t be charged for the first 500 images/day).');
+      }
       throw new Error('Rate limit exceeded. Free tier allows 500 images/day. Please try again later.');
     }
     if (response.status === 403) {
-      throw new Error('Access denied. Please check your Gemini API key has image generation enabled.');
+      throw new Error('BILLING_REQUIRED: Access denied. Please ensure your Gemini API key has billing enabled at ai.google.dev.');
     }
     if (response.status === 400) {
       if (error.includes('API_KEY_INVALID')) {
@@ -393,10 +397,25 @@ serve(async (req) => {
         throw new Error('Nano Banana Pro requires a Gemini API key.');
       }
     } else {
-      // Default: Nano Banana (Free)
+      // Default: Nano Banana (Free) with DALL-E fallback on billing/quota issues
       if (userKeys.gemini) {
-        base64Data = await generateWithNanoBanana(prompt, userKeys.gemini);
-        usedModel = 'nano-banana-free';
+        try {
+          base64Data = await generateWithNanoBanana(prompt, userKeys.gemini);
+          usedModel = 'nano-banana-free';
+        } catch (nanoBananaError: any) {
+          // If billing/quota issue and OpenAI available, fallback to DALL-E
+          if (userKeys.openai && (
+            nanoBananaError.message.includes('BILLING_REQUIRED') ||
+            nanoBananaError.message.includes('Rate limit') ||
+            nanoBananaError.message.includes('quota')
+          )) {
+            console.log('Gemini failed due to billing/quota, falling back to DALL-E:', nanoBananaError.message);
+            base64Data = await generateWithOpenAI(prompt, userKeys.openai);
+            usedModel = 'dall-e-3';
+          } else {
+            throw nanoBananaError;
+          }
+        }
       } else if (userKeys.openai) {
         console.log('Gemini not available, falling back to OpenAI');
         base64Data = await generateWithOpenAI(prompt, userKeys.openai);
