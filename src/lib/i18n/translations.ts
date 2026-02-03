@@ -296,6 +296,23 @@ export interface Translations {
     generated: string;
     failed: string;
   };
+  settingsApiKeys: {
+    title: string;
+    description: string;
+    required: string;
+    optional: string;
+    configured: string;
+    notConfigured: string;
+    update: string;
+    removed: string;
+    securityNote: string;
+    noKeysWarning: string;
+    howItWorks: string;
+    howItWorks1: string;
+    howItWorks2: string;
+    howItWorks3: string;
+    howItWorks4: string;
+  };
 }
 
 export const translations: Record<Language, Translations> = {
@@ -543,10 +560,10 @@ export const translations: Record<Language, Translations> = {
       description: 'Choose the AI model for generating images for your LinkedIn posts',
       modelLabel: 'Image Generation Model',
       modelNotes: 'Model Notes',
-      geminiNote: 'Gemini models use Lovable AI - no additional API key required',
-      dalleNote: 'DALL-E 3 requires an OpenAI API key configured in secrets',
-      flashNote: 'Flash model is faster but may have slightly lower quality',
-      accessTip: 'You can access this setting from the draft editor via the Image dropdown → "Choose Model"',
+      geminiNote: 'Requires billing-enabled Gemini API key. 500 free images/day (no charges)',
+      dalleNote: 'Requires OpenAI API key. Paid per image generated',
+      flashNote: 'Requires billing-enabled Gemini API key. Paid per image (highest quality)',
+      accessTip: 'All models require a billing-enabled API key. Nano Banana offers 500 free images/day without charges.',
     },
     settingsGuardrails: {
       title: 'Content Rules',
@@ -594,6 +611,23 @@ export const translations: Record<Language, Translations> = {
       regenerate: 'Regenerate',
       generated: 'Generated',
       failed: 'Generation failed',
+    },
+    settingsApiKeys: {
+      title: 'API Keys',
+      description: 'Configure your AI provider API keys. Your keys are stored securely and never shared.',
+      required: 'Required',
+      optional: 'Optional',
+      configured: 'Configured',
+      notConfigured: 'Not configured',
+      update: 'Update',
+      removed: 'API key removed',
+      securityNote: 'Your API keys are stored securely in the database and are only used server-side. They are never exposed to the browser.',
+      noKeysWarning: 'At least one AI key (Gemini or ChatGPT) is required to use AI features. Gemini offers a free tier at Google AI Studio.',
+      howItWorks: 'How it works',
+      howItWorks1: 'Gemini and ChatGPT are equal priority for drafts, hashtags, and rewrites - use whichever you prefer',
+      howItWorks2: 'Perplexity is used for research when available; otherwise Gemini with web grounding is used',
+      howItWorks3: 'Firecrawl enables detailed content scraping - without it, only AI summaries are shown',
+      howItWorks4: 'For images, Gemini is the default; DALL-E is available if you add an OpenAI key',
     },
   },
   he: {
@@ -840,10 +874,10 @@ export const translations: Record<Language, Translations> = {
       description: 'בחר את מודל ה-AI ליצירת תמונות לפוסטים שלך בלינקדאין',
       modelLabel: 'מודל יצירת תמונות',
       modelNotes: 'הערות על המודלים',
-      geminiNote: 'מודלי Gemini משתמשים ב-Lovable AI - לא נדרש מפתח API נוסף',
-      dalleNote: 'DALL-E 3 דורש מפתח API של OpenAI שמוגדר בסודות',
-      flashNote: 'מודל Flash מהיר יותר אך עשוי להיות באיכות מעט נמוכה יותר',
-      accessTip: 'ניתן לגשת להגדרה זו מעורך הטיוטה דרך תפריט תמונה → "בחר מודל"',
+      geminiNote: 'דורש מפתח Gemini API עם חיוב מופעל. 500 תמונות חינם ליום (ללא חיוב)',
+      dalleNote: 'דורש מפתח OpenAI API. תשלום לפי תמונה',
+      flashNote: 'דורש מפתח Gemini API עם חיוב מופעל. תשלום לפי תמונה (איכות גבוהה)',
+      accessTip: 'כל המודלים דורשים מפתח API עם חיוב מופעל. Nano Banana מציע 500 תמונות חינם ליום ללא חיוב.',
     },
     settingsGuardrails: {
       title: 'כללי תוכן',
@@ -891,6 +925,23 @@ export const translations: Record<Language, Translations> = {
       regenerate: 'צור מחדש',
       generated: 'נוצר',
       failed: 'היצירה נכשלה',
+    },
+    settingsApiKeys: {
+      title: 'מפתחות API',
+      description: 'הגדר את מפתחות ה-API של ספקי ה-AI שלך. המפתחות שלך מאוחסנים באופן מאובטח ולעולם לא משותפים.',
+      required: 'נדרש',
+      optional: 'אופציונלי',
+      configured: 'מוגדר',
+      notConfigured: 'לא מוגדר',
+      update: 'עדכן',
+      removed: 'מפתח API הוסר',
+      securityNote: 'מפתחות ה-API שלך מאוחסנים באופן מאובטח במסד הנתונים ומשמשים רק בצד השרת. הם לעולם לא נחשפים לדפדפן.',
+      noKeysWarning: 'נדרש לפחות מפתח AI אחד (Gemini או ChatGPT) לשימוש בתכונות AI. ל-Gemini יש שכבה חינמית ב-Google AI Studio.',
+      howItWorks: 'איך זה עובד',
+      howItWorks1: 'Gemini ו-ChatGPT בעדיפות שווה לטיוטות, האשטאגים ושכתובים - השתמש במה שאתה מעדיף',
+      howItWorks2: 'Perplexity משמש למחקר כשזמין; אחרת Gemini עם חיפוש אינטרנט',
+      howItWorks3: 'Firecrawl מאפשר גרידת תוכן מפורטת - בלעדיו, רק סיכומי AI מוצגים',
+      howItWorks4: 'לתמונות, Gemini הוא ברירת המחדל; DALL-E זמין אם תוסיף מפתח OpenAI',
     },
   },
 };

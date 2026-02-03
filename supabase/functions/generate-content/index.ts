@@ -2,7 +2,6 @@ import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.89.0";
 
-const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
 const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
@@ -21,6 +20,56 @@ interface GenerateRequest {
   language?: string;
 }
 
+// ==================== USER API KEYS ====================
+
+interface UserApiKeys {
+  gemini: string | null;
+  openai: string | null;
+  perplexity: string | null;
+  firecrawl: string | null;
+}
+
+async function getUserApiKeys(userId: string): Promise<UserApiKeys> {
+  const { data: settings } = await supabase
+    .from('settings')
+    .select('key, value')
+    .eq('user_id', userId)
+    .in('key', ['user_api_key_gemini', 'user_api_key_openai', 'user_api_key_perplexity', 'user_api_key_firecrawl']);
+
+  const keys: UserApiKeys = { gemini: null, openai: null, perplexity: null, firecrawl: null };
+  
+  settings?.forEach(s => {
+    let value = s.value;
+    // Parse JSON string if needed
+    if (typeof value === 'string') {
+      try {
+        value = JSON.parse(value);
+      } catch {
+        // Keep as string
+      }
+    }
+    // Extract actual key value
+    const keyValue = typeof value === 'string' && value.trim() ? value.trim() : null;
+    
+    switch (s.key) {
+      case 'user_api_key_gemini':
+        keys.gemini = keyValue;
+        break;
+      case 'user_api_key_openai':
+        keys.openai = keyValue;
+        break;
+      case 'user_api_key_perplexity':
+        keys.perplexity = keyValue;
+        break;
+      case 'user_api_key_firecrawl':
+        keys.firecrawl = keyValue;
+        break;
+    }
+  });
+
+  return keys;
+}
+
 // ==================== INPUT VALIDATION ====================
 
 const ALLOWED_LANGUAGES = ['en', 'he', 'es', 'fr', 'de', 'ar'];
@@ -33,31 +82,26 @@ interface ValidationResult {
 
 function sanitizeString(value: unknown, maxLength: number): string | null {
   if (typeof value !== 'string') return null;
-  // Remove control characters except newlines and tabs
   return value.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '').substring(0, maxLength);
 }
 
 function validateInputs(type: GenerationType, inputs: Record<string, any>, language?: string): ValidationResult {
   const sanitized: Record<string, any> = {};
   
-  // Validate language if provided
   if (language !== undefined) {
     if (typeof language !== 'string' || !ALLOWED_LANGUAGES.includes(language)) {
       return { valid: false, error: `Invalid language. Allowed: ${ALLOWED_LANGUAGES.join(', ')}` };
     }
   }
   
-  // Type-specific validation
   switch (type) {
     case 'draft': {
-      // Required: title
       const title = sanitizeString(inputs.title, 500);
       if (!title) {
         return { valid: false, error: 'Title is required and must be a string (max 500 chars)' };
       }
       sanitized.title = title;
       
-      // Optional: summary, full_content, source_url
       if (inputs.summary !== undefined) {
         const summary = sanitizeString(inputs.summary, 5000);
         if (summary === null) {
@@ -86,14 +130,12 @@ function validateInputs(type: GenerationType, inputs: Record<string, any>, langu
     
     case 'hashtags':
     case 'hashtags_free': {
-      // Required: body
       const body = sanitizeString(inputs.body, 10000);
       if (!body) {
         return { valid: false, error: 'Body is required and must be a string (max 10000 chars)' };
       }
       sanitized.body = body;
       
-      // Optional: title
       if (inputs.title !== undefined) {
         const title = sanitizeString(inputs.title, 500);
         if (title === null) {
@@ -105,7 +147,6 @@ function validateInputs(type: GenerationType, inputs: Record<string, any>, langu
     }
     
     case 'rewrite': {
-      // Required: body, action
       const body = sanitizeString(inputs.body, 10000);
       if (!body) {
         return { valid: false, error: 'Body is required and must be a string (max 10000 chars)' };
@@ -120,7 +161,6 @@ function validateInputs(type: GenerationType, inputs: Record<string, any>, langu
       }
       sanitized.action = action;
       
-      // Optional: language
       if (inputs.language !== undefined) {
         if (typeof inputs.language !== 'string' || !ALLOWED_LANGUAGES.includes(inputs.language)) {
           return { valid: false, error: `Invalid language in inputs. Allowed: ${ALLOWED_LANGUAGES.join(', ')}` };
@@ -131,14 +171,12 @@ function validateInputs(type: GenerationType, inputs: Record<string, any>, langu
     }
     
     case 'image_description': {
-      // Required: body
       const body = sanitizeString(inputs.body, 10000);
       if (!body) {
         return { valid: false, error: 'Body is required and must be a string (max 10000 chars)' };
       }
       sanitized.body = body;
       
-      // Optional: title
       if (inputs.title !== undefined) {
         const title = sanitizeString(inputs.title, 500);
         if (title === null) {
@@ -156,7 +194,135 @@ function validateInputs(type: GenerationType, inputs: Record<string, any>, langu
   return { valid: true, sanitized };
 }
 
-// ==================== END INPUT VALIDATION ====================
+// ==================== AI PROVIDER CALLS ====================
+
+async function callOpenAI(
+  systemPrompt: string,
+  userPrompt: string,
+  apiKey: string,
+  model: string = 'gpt-4o-mini'
+): Promise<{ content: string; usage: any }> {
+  console.log(`Calling OpenAI with model: ${model}`);
+  
+  const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model,
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userPrompt }
+      ],
+      temperature: 0.7,
+    }),
+  });
+
+  if (!response.ok) {
+    const error = await response.text();
+    console.error('OpenAI API error:', error);
+    if (response.status === 401) {
+      throw new Error('Invalid OpenAI API key. Please check your API key in Settings → API Keys.');
+    }
+    if (response.status === 429) {
+      throw new Error('OpenAI rate limit exceeded. Please try again later.');
+    }
+    if (response.status === 402 || response.status === 403) {
+      throw new Error('OpenAI API access denied. Please check your API key has sufficient credits.');
+    }
+    throw new Error(`OpenAI API error: ${error}`);
+  }
+
+  const data = await response.json();
+  return {
+    content: data.choices[0].message.content,
+    usage: data.usage,
+  };
+}
+
+async function callGemini(
+  systemPrompt: string,
+  userPrompt: string,
+  apiKey: string,
+  model: string = 'gemini-2.5-flash'
+): Promise<{ content: string; usage: any }> {
+  console.log(`Calling Gemini with model: ${model}`);
+  
+  const response = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [
+          { parts: [{ text: `${systemPrompt}\n\n${userPrompt}` }] }
+        ],
+        generationConfig: { temperature: 0.7 },
+      }),
+    }
+  );
+
+  if (!response.ok) {
+    const error = await response.text();
+    console.error('Gemini API error:', error);
+    if (response.status === 400 && error.includes('API_KEY_INVALID')) {
+      throw new Error('Invalid Gemini API key. Please check your API key in Settings → API Keys.');
+    }
+    if (response.status === 429) {
+      throw new Error('Gemini rate limit exceeded. Please try again later.');
+    }
+    throw new Error(`Gemini API error: ${error}`);
+  }
+
+  const data = await response.json();
+  const content = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+  
+  return {
+    content,
+    usage: {
+      prompt_tokens: data.usageMetadata?.promptTokenCount || 0,
+      completion_tokens: data.usageMetadata?.candidatesTokenCount || 0,
+      total_tokens: data.usageMetadata?.totalTokenCount || 0,
+    },
+  };
+}
+
+// Unified AI call that picks the best available provider
+async function callAI(
+  systemPrompt: string,
+  userPrompt: string,
+  userKeys: UserApiKeys,
+  preferredModel?: string
+): Promise<{ content: string; usage: any; provider: string }> {
+  // Both OpenAI and Gemini are equal priority - use whichever is available
+  // Check OpenAI first if available
+  if (userKeys.openai) {
+    try {
+      const result = await callOpenAI(systemPrompt, userPrompt, userKeys.openai, preferredModel || 'gpt-4o-mini');
+      return { ...result, provider: 'openai' };
+    } catch (error) {
+      console.error('OpenAI failed, trying Gemini fallback:', error);
+      // Fall through to Gemini
+    }
+  }
+  
+  // Try Gemini
+  if (userKeys.gemini) {
+    try {
+      const result = await callGemini(systemPrompt, userPrompt, userKeys.gemini, 'gemini-2.5-flash');
+      return { ...result, provider: 'gemini' };
+    } catch (error) {
+      console.error('Gemini failed:', error);
+      throw error;
+    }
+  }
+  
+  throw new Error('No API keys configured. Please add your Gemini or ChatGPT API key in Settings → API Keys.');
+}
+
+// ==================== HELPER FUNCTIONS ====================
 
 async function getPromptFromSettings(key: string, userId?: string): Promise<string | null> {
   let query = supabase
@@ -164,7 +330,6 @@ async function getPromptFromSettings(key: string, userId?: string): Promise<stri
     .select('value')
     .eq('key', key);
   
-  // Filter by user_id if provided (required for multi-user isolation)
   if (userId) {
     query = query.eq('user_id', userId);
   }
@@ -204,134 +369,11 @@ async function logToLedger(entry: {
   if (error) console.error('Failed to log to ledger:', error);
 }
 
-async function callOpenAI(
-  systemPrompt: string,
-  userPrompt: string,
-  model: string = 'gpt-4o-mini'
-): Promise<{ content: string; usage: any }> {
-  console.log(`Calling OpenAI with model: ${model}`);
-  
-  const response = await fetch('https://api.openai.com/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${openAIApiKey}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      model,
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: userPrompt }
-      ],
-      temperature: 0.7,
-    }),
-  });
+// ==================== GENERATION FUNCTIONS ====================
 
-  if (!response.ok) {
-    const error = await response.text();
-    console.error('OpenAI API error:', error);
-    throw new Error(`OpenAI API error: ${error}`);
-  }
-
-  const data = await response.json();
-  return {
-    content: data.choices[0].message.content,
-    usage: data.usage,
-  };
-}
-
-async function generateTopics(inputs: Record<string, any>, userId: string) {
-  // Use 'perplexity_system_prompt' to match Settings UI key
-  const customPrompt = await getPromptFromSettings('perplexity_system_prompt', userId);
-  
-  const defaultPrompt = `You are a LinkedIn content strategist and thought leader. Your task is to generate compelling topic ideas that drive engagement and establish authority.
-
-## Context
-${inputs.context || 'Generate topics for a professional audience interested in technology, AI, and business innovation.'}
-
-## Instructions
-Generate exactly 5 LinkedIn post topic ideas. Each topic should:
-- Be specific and actionable (not generic advice)
-- Have a clear hook that stops the scroll
-- Include a compelling angle or unique perspective
-- Be relevant to current industry trends and discussions
-
-## Output Format
-Return a valid JSON array with exactly 5 topics. Each topic must have:
-- "title": A compelling, specific topic title (max 10 words)
-- "hook": An attention-grabbing opening line that creates curiosity (1-2 sentences)
-- "rationale": Why this topic will resonate with the audience and drive engagement (1-2 sentences)
-- "tags": An array of 2-4 relevant topic tags/categories
-
-## Example Structure
-[
-  {
-    "title": "Why Most AI Implementations Fail",
-    "hook": "I've seen 47 AI projects this year. Only 3 actually delivered ROI. Here's the pattern I noticed.",
-    "rationale": "Contrarian take backed by real experience. Creates curiosity about the pattern.",
-    "tags": ["AI", "Digital Transformation", "Leadership"]
-  }
-]
-
-Return ONLY the JSON array, no additional text or explanation.`;
-
-  const systemPrompt = 'You are a LinkedIn content strategist. Generate topic ideas in the exact JSON format requested.';
-  const userPrompt = customPrompt 
-    ? interpolatePlaceholders(customPrompt, inputs) 
-    : defaultPrompt;
-
-  const { content, usage } = await callOpenAI(systemPrompt, userPrompt, 'gpt-4o-mini');
-  
-  // Parse the JSON response
-  let topics = [];
-  try {
-    const jsonMatch = content.match(/\[[\s\S]*\]/);
-    if (jsonMatch) {
-      topics = JSON.parse(jsonMatch[0]);
-    }
-  } catch (e) {
-    console.error('Failed to parse topics JSON:', e);
-    throw new Error('Failed to parse AI response');
-  }
-
-  // Log to ledger
-  await logToLedger({
-    user_id: userId,
-    generation_type: 'topics',
-    system_prompt: systemPrompt,
-    user_prompt: userPrompt,
-    inputs,
-    raw_output: content,
-    parsed_output: { topics },
-    model: 'gpt-4o-mini',
-    token_usage: usage,
-  });
-
-  // Insert topics into database
-  const insertedTopics = [];
-  for (const topic of topics) {
-    const { data, error } = await supabase
-      .from('topic_ideas')
-      .insert({
-        title: topic.title,
-        hook: topic.hook,
-        rationale: topic.rationale,
-        tags: topic.tags || [],
-        status: 'new',
-      })
-      .select()
-      .single();
-    
-    if (data) insertedTopics.push(data);
-  }
-
-  return { topics: insertedTopics, usage };
-}
-
-async function generateDraft(inputs: Record<string, any>, language: string = 'en', userId?: string) {
+async function generateDraft(inputs: Record<string, any>, language: string = 'en', userId: string, userKeys: UserApiKeys) {
   const { title, summary, full_content, source_url } = inputs;
   
-  // Use custom GPT instructions from settings or fall back to default
   const customGptInstructions = await getPromptFromSettings('gpt_master_instructions', userId);
   
   const languageNames: Record<string, string> = {
@@ -344,7 +386,6 @@ async function generateDraft(inputs: Record<string, any>, language: string = 'en
   };
   const langName = languageNames[language] || language;
   
-  // Default GPT instructions (from user's Custom GPT)
   const defaultGptInstructions = `You are a professional content creator specializing in crafting high-quality, humanlike LinkedIn posts in both English and Hebrew. Your primary role is to assist users in generating posts that feel authentic, engaging, and aligned with real human communication patterns seen in top-performing LinkedIn content. Your tone should vary slightly depending on the user's prompt, but must always remain professional, thoughtful, and emotionally intelligent — as if a real person carefully reviewed and refined the writing.
 
 Avoid clichés and patterns that reveal the text was generated by AI. Posts should read as if written by a reflective, articulate human with a clear intention and voice.
@@ -384,7 +425,6 @@ Human-Like Style Techniques:
 
   const systemPrompt = customGptInstructions || defaultGptInstructions;
 
-  // Build context-rich user prompt with all research data
   const userPrompt = `Create a LinkedIn post based on this AI tool research:
 
 ## Tool/Topic
@@ -411,7 +451,7 @@ Return a valid JSON object with:
 
 Return ONLY the JSON object, no additional text or explanation.`;
 
-  const { content, usage } = await callOpenAI(systemPrompt, userPrompt, 'gpt-4o');
+  const { content, usage, provider } = await callAI(systemPrompt, userPrompt, userKeys, 'gpt-4o');
 
   let parsed = { body: '', image_description: '' };
   try {
@@ -425,26 +465,24 @@ Return ONLY the JSON object, no additional text or explanation.`;
     parsed.body = content;
   }
 
-  // Log to ledger
   await logToLedger({
-    user_id: userId!,
+    user_id: userId,
     generation_type: 'draft',
     system_prompt: systemPrompt,
     user_prompt: userPrompt,
     inputs,
     raw_output: content,
     parsed_output: parsed,
-    model: 'gpt-4o',
+    model: provider === 'openai' ? 'gpt-4o' : 'gemini-2.5-flash',
     token_usage: usage,
   });
 
   return { draft: parsed, usage };
 }
 
-async function generateHashtags(inputs: Record<string, any>, userId: string) {
+async function generateHashtags(inputs: Record<string, any>, userId: string, userKeys: UserApiKeys) {
   const { body, title } = inputs;
   
-  // Use 'hashtag_generator_prompt' to match Settings UI key
   const customPrompt = await getPromptFromSettings('hashtag_generator_prompt', userId);
   
   const defaultPrompt = `You are a LinkedIn hashtag expert. Generate PRECISE, TOOL-SPECIFIC hashtags.
@@ -493,118 +531,8 @@ Return ONLY the JSON object, no additional text.`;
     ? interpolatePlaceholders(customPrompt, inputs) 
     : defaultPrompt;
 
-  const { content, usage } = await callOpenAI(systemPrompt, userPrompt, 'gpt-4o-mini');
+  const { content, usage, provider } = await callAI(systemPrompt, userPrompt, userKeys);
 
-  let hashtags = { hashtags_broad: [], hashtags_niche: [], hashtags_trending: [] };
-  try {
-    const jsonMatch = content.match(/\{[\s\S]*\}/);
-    if (jsonMatch) {
-      hashtags = JSON.parse(jsonMatch[0]);
-    }
-  } catch (e) {
-    console.error('Failed to parse hashtags:', e);
-  }
-
-  await logToLedger({
-    user_id: userId,
-    generation_type: 'hashtags',
-    system_prompt: systemPrompt,
-    user_prompt: userPrompt,
-    inputs,
-    raw_output: content,
-    parsed_output: hashtags,
-    model: 'gpt-4o-mini',
-    token_usage: usage,
-  });
-
-  return { hashtags, usage };
-}
-
-// Generate hashtags using Lovable AI (Free tier - Gemini)
-async function generateHashtagsFree(inputs: Record<string, any>, userId: string) {
-  const { body, title } = inputs;
-  
-  const lovableApiKey = Deno.env.get('LOVABLE_API_KEY');
-  if (!lovableApiKey) {
-    throw new Error('LOVABLE_API_KEY is not configured');
-  }
-
-  const systemPrompt = 'You are a LinkedIn SEO expert. Generate hashtags in the exact JSON format requested.';
-  
-  const userPrompt = `You are a LinkedIn hashtag expert. Generate PRECISE, TOOL-SPECIFIC hashtags.
-
-## Post Content
-Title: ${title}
-Content: ${body}
-
-## CRITICAL INSTRUCTIONS
-
-### Step 1: Extract the EXACT tool/product name
-- Look for proper nouns, product names, or AI tool names in the content
-- Examples: "Cursor", "Claude", "Midjourney", "Notion AI", "GitHub Copilot"
-
-### Step 2: Generate hashtags following this structure
-
-1. **Tool-Specific Hashtag** (1): Create a hashtag using the EXACT tool name
-   - Format: #ToolName or #ToolNameAI
-   - Examples: #CursorAI, #ClaudeAI, #Midjourney, #GitHubCopilot
-   
-2. **Niche Category Hashtags** (2): Specific to what the tool DOES
-   - Focus on the tool's primary function
-   - Examples: #CodeGeneration, #AIWriting, #ImageGeneration, #AIProductivity
-   
-3. **Broad Hashtags** (1-2): General tech/AI categories
-   - Only include 1-2 at most
-   - Examples: #AI, #MachineLearning, #TechTools
-
-### Rules
-- MAXIMUM 5 hashtags total (4-5 is ideal)
-- First hashtag MUST be the tool name
-- Include # symbol with each hashtag
-- Use CamelCase for multi-word hashtags
-- NO generic hashtags like #innovation, #future, #technology alone
-
-## Output Format
-Return a valid JSON object with:
-- "hashtags_broad": Array of 1-2 broad category hashtags
-- "hashtags_niche": Array of 2-3 specific function hashtags (including the tool name)
-- "hashtags_trending": Array of 0-1 trending hashtags (only if truly relevant)
-
-Return ONLY the JSON object, no additional text.`;
-
-  console.log('Calling Lovable AI Gateway for hashtags_free');
-  
-  const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${lovableApiKey}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      model: 'google/gemini-3-flash-preview',
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: userPrompt }
-      ],
-    }),
-  });
-
-  if (!response.ok) {
-    if (response.status === 429) {
-      throw new Error('Rate limit exceeded. Please try again later.');
-    }
-    if (response.status === 402) {
-      throw new Error('API credits exhausted. Please add credits to continue.');
-    }
-    const errorText = await response.text();
-    console.error('Lovable AI error:', response.status, errorText);
-    throw new Error(`AI generation failed: ${errorText}`);
-  }
-
-  const data = await response.json();
-  const content = data.choices?.[0]?.message?.content || '';
-
-  // Normalize response - handle multiple possible key formats
   let hashtags = { hashtags_broad: [] as string[], hashtags_niche: [] as string[], hashtags_trending: [] as string[] };
   try {
     const jsonMatch = content.match(/\{[\s\S]*\}/);
@@ -622,20 +550,20 @@ Return ONLY the JSON object, no additional text.`;
 
   await logToLedger({
     user_id: userId,
-    generation_type: 'hashtags_free',
+    generation_type: 'hashtags',
     system_prompt: systemPrompt,
     user_prompt: userPrompt,
     inputs,
     raw_output: content,
     parsed_output: hashtags,
-    model: 'google/gemini-3-flash-preview',
-    token_usage: data.usage,
+    model: provider === 'openai' ? 'gpt-4o-mini' : 'gemini-2.5-flash',
+    token_usage: usage,
   });
 
-  return { hashtags, usage: data.usage };
+  return { hashtags, usage };
 }
 
-async function rewriteContent(inputs: Record<string, any>, userId: string) {
+async function rewriteContent(inputs: Record<string, any>, userId: string, userKeys: UserApiKeys) {
   const { body, action, language = 'en' } = inputs;
   
   const languageNames: Record<string, string> = {
@@ -752,7 +680,7 @@ async function rewriteContent(inputs: Record<string, any>, userId: string) {
 
   const userPrompt = `${actionPrompts[action] || 'Improve this content for LinkedIn engagement.'}\n\n## Original Content\n${body}`;
 
-  const { content, usage } = await callOpenAI(systemPrompt, userPrompt, 'gpt-4o-mini');
+  const { content, usage, provider } = await callAI(systemPrompt, userPrompt, userKeys);
 
   await logToLedger({
     user_id: userId,
@@ -762,14 +690,14 @@ async function rewriteContent(inputs: Record<string, any>, userId: string) {
     inputs,
     raw_output: content,
     parsed_output: { rewritten: content },
-    model: 'gpt-4o-mini',
+    model: provider === 'openai' ? 'gpt-4o-mini' : 'gemini-2.5-flash',
     token_usage: usage,
   });
 
   return { rewritten: content, usage };
 }
 
-async function generateImageDescription(inputs: Record<string, any>, userId: string) {
+async function generateImageDescription(inputs: Record<string, any>, userId: string, userKeys: UserApiKeys) {
   const { title, body } = inputs;
   
   const customPrompt = await getPromptFromSettings('image_generator_prompt', userId);
@@ -817,7 +745,7 @@ Make it specific to THIS tool's function. No generic professional imagery.`;
     ? interpolatePlaceholders(customPrompt, inputs) 
     : defaultUserPrompt;
 
-  const { content, usage } = await callOpenAI(systemPrompt, userPrompt, 'gpt-4o-mini');
+  const { content, usage, provider } = await callAI(systemPrompt, userPrompt, userKeys);
 
   await logToLedger({
     user_id: userId,
@@ -827,12 +755,14 @@ Make it specific to THIS tool's function. No generic professional imagery.`;
     inputs,
     raw_output: content,
     parsed_output: { image_description: content.trim() },
-    model: 'gpt-4o-mini',
+    model: provider === 'openai' ? 'gpt-4o-mini' : 'gemini-2.5-flash',
     token_usage: usage,
   });
 
   return { image_description: content.trim(), usage };
 }
+
+// ==================== MAIN HANDLER ====================
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -861,7 +791,20 @@ serve(async (req) => {
       });
     }
 
-    // User is authenticated, proceed with request
+    // Get user's API keys
+    const userKeys = await getUserApiKeys(user.id);
+    console.log(`User ${user.id} keys: gemini=${!!userKeys.gemini}, openai=${!!userKeys.openai}`);
+
+    // Check if user has at least one AI key
+    if (!userKeys.gemini && !userKeys.openai) {
+      return new Response(JSON.stringify({ 
+        error: 'No API keys configured. Please add your Gemini or ChatGPT API key in Settings → API Keys to use AI features.' 
+      }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     const { type, inputs = {}, language }: GenerateRequest = await req.json();
     
     // Validate inputs before processing
@@ -880,19 +823,18 @@ serve(async (req) => {
     let result;
     switch (type) {
       case 'draft':
-        result = await generateDraft(sanitizedInputs, language || sanitizedInputs.language || 'en', user.id);
+        result = await generateDraft(sanitizedInputs, language || sanitizedInputs.language || 'en', user.id, userKeys);
         break;
       case 'hashtags':
-        result = await generateHashtags(sanitizedInputs, user.id);
-        break;
       case 'hashtags_free':
-        result = await generateHashtagsFree(sanitizedInputs, user.id);
+        // Both now use the same function with user keys
+        result = await generateHashtags(sanitizedInputs, user.id, userKeys);
         break;
       case 'rewrite':
-        result = await rewriteContent(sanitizedInputs, user.id);
+        result = await rewriteContent(sanitizedInputs, user.id, userKeys);
         break;
       case 'image_description':
-        result = await generateImageDescription(sanitizedInputs, user.id);
+        result = await generateImageDescription(sanitizedInputs, user.id, userKeys);
         break;
       default:
         throw new Error(`Unknown generation type: ${type}`);

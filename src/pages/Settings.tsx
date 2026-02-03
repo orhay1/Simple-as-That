@@ -12,7 +12,8 @@ import { ImageSettingsTab } from '@/components/settings/ImageSettingsTab';
 import { GuardrailsTab } from '@/components/settings/GuardrailsTab';
 import { LanguageTab } from '@/components/settings/LanguageTab';
 import { AccountTab } from '@/components/settings/AccountTab';
-import { Linkedin, FileText, Shield, CheckCircle, AlertCircle, Loader2, LogOut, Image, Globe, User } from 'lucide-react';
+import { APIKeysTab } from '@/components/settings/APIKeysTab';
+import { Linkedin, FileText, Shield, CheckCircle, AlertCircle, Loader2, LogOut, Image, Globe, User, Key } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 
@@ -34,8 +35,8 @@ export default function Settings() {
     }
   }, [searchParams, setSearchParams]);
 
-  // Get the tab from URL or default to linkedin
-  const tabFromUrl = searchParams.get('tab') || 'linkedin';
+  // Get the tab from URL or default to apikeys
+  const tabFromUrl = searchParams.get('tab') || 'apikeys';
 
   const handleTabChange = (value: string) => {
     setSearchParams({ tab: value });
@@ -50,7 +51,11 @@ export default function Settings() {
         </div>
         
         <Tabs value={tabFromUrl} onValueChange={handleTabChange} className="space-y-4">
-          <TabsList className="grid w-full grid-cols-6 lg:w-auto lg:inline-grid" dir="ltr">
+          <TabsList className="grid w-full grid-cols-7 lg:w-auto lg:inline-grid" dir="ltr">
+            <TabsTrigger value="apikeys" className="gap-2">
+              <Key className="h-4 w-4" />
+              <span className="hidden sm:inline">{t.settingsApiKeys.title}</span>
+            </TabsTrigger>
             <TabsTrigger value="linkedin" className="gap-2">
               <Linkedin className="h-4 w-4" />
               <span className="hidden sm:inline">{t.settings.linkedin}</span>
@@ -76,6 +81,10 @@ export default function Settings() {
               <span className="hidden sm:inline">{t.settings.account}</span>
             </TabsTrigger>
           </TabsList>
+          
+          <TabsContent value="apikeys">
+            <APIKeysTab />
+          </TabsContent>
           
           <TabsContent value="linkedin" className="space-y-4">
             <Card>
